@@ -129,13 +129,17 @@ int IsLegacyMassBoot(void)
     return (!strncmp(path, "mass:", 5));
 }
 
-/* Build the path to our INSTALL/ payload folder (which sits next to the ELF).
-   bdmfs_fatfs always registers the generic "massN:" device, and we load only ONE
-   BDM backend at a time (so unit N maps to massN). If the launcher handed us a
-   per-transport BDM alias (usbN:/mx4sioN:/ataN:), rewrite the device to massN: so
-   the payload resolves no matter which naming the launcher used. Everything else
-   (massN:, bare mass:, mc:, mmce:, hdd:/pfs:, cdfs:, host:) is used verbatim.
-   NOTE: getcwd() keeps the trailing '/', so we just append "INSTALL". */
+/* Does this directory open? Used to probe candidate payload locations. */
+static int PathDirOpens(const char *path)
+{
+    int fd = fileXioDopen(path);
+    if (fd >= 0) {
+        fileXioDclose(fd);
+        return 1;
+    }
+    return 0;
+}
+
 #ifdef DIAG_INSTALL_PATH
 // On-screen diagnostic: show how we resolved the boot device + payload path and
 // whether the INSTALL/ folder is actually readable. Enabled only in diag builds.
@@ -156,21 +160,56 @@ static void ShowInstallPathDiag(const char *root)
 }
 #endif
 
+/* Build the path to our INSTALL/ payload folder (which sits next to the ELF).
+   The device NAME our own driver registers may differ from what the launcher put
+   in argv[0]: bdmfs_fatfs registers the generic "massN:" AND typed "<transport>N:"
+   names, drivers may or may not expose a bare (unit-less) alias, and we load only
+   one BDM backend (so its devices are massN by BDM index). So for the BDM-backed
+   transports (usb/mass/mx4sio/ata) we PROBE the likely names and use the first
+   whose INSTALL/ folder actually opens: exactly what the launcher gave us, then
+   the generic massN:/mass0:, then the typed <transport>N:. This makes us accept
+   every semantic (usb:/usbN:/mass:/massN:/ata:/ataN:/mx4sio:/mx4sioN:). Non-BDM
+   devices (mc/mmce/hdd/pfs/cdfs/host) have stable native names and are used
+   verbatim. getcwd() keeps the trailing '/', so we just append "INSTALL". */
 void GetInstallRootPath(char *out, int outlen)
 {
-    char cwd[256];
-    const char *colon;
+    char cwd[256], cand[300];
+    const char *colon, *subpath;
+    int devlen, tlen;
+    char unit;
 
     getcwd(cwd, sizeof(cwd));
 
-    if ((!strncmp(cwd, "usb", 3) && (cwd[3] == ':' || (cwd[3] >= '0' && cwd[3] <= '9'))) ||
-        (!strncmp(cwd, "mx4sio", 6) && (cwd[6] == ':' || (cwd[6] >= '0' && cwd[6] <= '9'))) ||
-        (!strncmp(cwd, "ata", 3) && (cwd[3] >= '0' && cwd[3] <= '9'))) {
-        if ((colon = strchr(cwd, ':')) != NULL) {
-            char unit = (colon > cwd && colon[-1] >= '0' && colon[-1] <= '9') ? colon[-1] : '0';
-            snprintf(out, outlen, "mass%c:%sINSTALL", unit, colon + 1);
-            return;
-        }
+    if ((colon = strchr(cwd, ':')) == NULL) {
+        snprintf(out, outlen, "%sINSTALL", cwd);
+        return;
+    }
+    subpath = colon + 1;         // keeps the trailing '/', e.g. "/FMCBinst.../"
+    devlen = (int)(colon - cwd); // device-token length, e.g. 5 for "mass0"
+
+    // transport = device letters minus trailing digits; unit = last digit (or '0').
+    tlen = devlen;
+    while (tlen > 0 && cwd[tlen - 1] >= '0' && cwd[tlen - 1] <= '9')
+        tlen--;
+    unit = (tlen < devlen) ? cwd[devlen - 1] : '0';
+
+    if ((tlen == 4 && !strncmp(cwd, "mass", 4)) ||
+        (tlen == 3 && !strncmp(cwd, "usb", 3)) ||
+        (tlen == 6 && !strncmp(cwd, "mx4sio", 6)) ||
+        (tlen == 3 && !strncmp(cwd, "ata", 3))) {
+        snprintf(cand, sizeof(cand), "%sINSTALL", cwd); // exactly as launched
+        if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
+        snprintf(cand, sizeof(cand), "mass%c:%sINSTALL", unit, subpath); // generic mass<unit>
+        if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
+        snprintf(cand, sizeof(cand), "mass0:%sINSTALL", subpath); // generic mass0
+        if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
+        snprintf(cand, sizeof(cand), "%.*s%c:%sINSTALL", tlen, cwd, unit, subpath); // typed <transport><unit>
+        if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
+
+        // Nothing opened; fall back to generic mass<unit>: and let the caller
+        // surface the read error (a diag build shows what was tried).
+        snprintf(out, outlen, "mass%c:%sINSTALL", unit, subpath);
+        return;
     }
 
     snprintf(out, outlen, "%sINSTALL", cwd);
