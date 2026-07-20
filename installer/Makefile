@@ -95,17 +95,20 @@ MCTOOLS_irx.c: $(IRX_DIR)/mctools.irx
 USBD_irx.c: $(PS2SDK)/iop/irx/usbd.irx
 	bin2c $< $@ USBD_irx
 
-# BDM stack pulled from the SDK (matched versions + per-transport typed-driver
-# names "usbN:"/"mx4sioN:"/"ataN:"), not the older committed irx/compiled copies.
-bdm_irx.c: $(PS2SDK)/iop/irx/bdm.irx
+# BDM USB stack pulled from the project's committed irx/compiled copies -- the
+# exact modules the shipping exFAT installer used and that boot on real hardware.
+# (The SDK copies black-screened; probing means we no longer need their typed names.)
+bdm_irx.c: $(IRX_DIR)/bdm.irx
 	bin2c $< $@ bdm_irx
 
-bdmfs_fatfs_irx.c: $(PS2SDK)/iop/irx/bdmfs_fatfs.irx
+bdmfs_fatfs_irx.c: $(IRX_DIR)/bdmfs_fatfs.irx
 	bin2c $< $@ bdmfs_fatfs_irx
 
-usbmass_bd_irx.c: $(PS2SDK)/iop/irx/usbmass_bd.irx
+usbmass_bd_irx.c: $(IRX_DIR)/usbmass_bd.irx
 	bin2c $< $@ usbmass_bd_irx
 
+# MX4SIO / ATA block backends only exist in the SDK (no committed copy). They ride
+# the same committed BDM core; verify on hardware before relying on them.
 mx4sio_bd_irx.c: $(PS2SDK)/iop/irx/mx4sio_bd.irx
 	bin2c $< $@ mx4sio_bd_irx
 

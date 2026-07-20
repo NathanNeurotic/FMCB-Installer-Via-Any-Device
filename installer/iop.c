@@ -107,14 +107,18 @@ static void LoadBootDeviceModules(void)
 {
     switch (GetBootDeviceID()) {
         case BOOT_DEVICE_MASS:
-            SifExecModuleBuffer(USBD_irx, size_USBD_irx, 0, NULL, NULL);
             if (IsLegacyMassBoot()) {
                 // Bare "mass:" -> legacy usbhdfsd (FAT only).
+                SifExecModuleBuffer(USBD_irx, size_USBD_irx, 0, NULL, NULL);
                 SifExecModuleBuffer(USBHDFSD_irx, size_USBHDFSD_irx, 0, NULL, NULL);
             } else {
-                // "massN:"/"usbN:" -> BDM USB (FAT32 + exFAT).
+                // "massN:"/"usbN:" -> BDM USB (FAT32 + exFAT). This is the exact
+                // stack + load order (bdm/bdmfs before usbd, then usbmass_bd) the
+                // shipping exFAT installer used; loading usbd first / using the SDK
+                // BDM modules black-screened on real hardware.
                 SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
                 SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
+                SifExecModuleBuffer(USBD_irx, size_USBD_irx, 0, NULL, NULL);
                 SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
             }
             break;
