@@ -1,5 +1,6 @@
 #define DEBUG_TTY_FEEDBACK /* Comment out to disable debugging messages */
 #include <sio.h>
+#include "sioprintf.h" /* sio_printf() shim (removed from modern ps2sdk <sio.h>) */
 #define DEBUG_PRINTF(args...) sio_printf(args)
 
 #ifndef FMCB_INSTALLER_VERSION

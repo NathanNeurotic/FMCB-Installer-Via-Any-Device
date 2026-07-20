@@ -63,12 +63,19 @@ int main(int argc, char *argv[])
     for (result=0; result<argc;result++)
         sio_printf("\targv[%d] = %s\n", argc, argv[result]);
 
-    // chdir("mass:/FMCBInstaller/");
+    /* The installer reads its INSTALL/ payload from its own folder, which ps2sdk
+       resolves from argv[0]/getcwd() regardless of the device it was launched
+       from. Accept any supported device (USB, memory card, HDD, MMCE/SD, host)
+       instead of only USB, so it also boots from the FMCB/OSDMenu and friends.
+       We only bail if we genuinely cannot identify the device from the working
+       directory (e.g. a launcher that passes no usable argv[0], so cwd defaults
+       to "host:" with no payload beside us). */
     if ((BootDevice = GetBootDeviceID()) == BOOT_DEVICE_UNKNOWN)
     {
-        sio_printf("BOOT DEVICE IS NOT USB. EXITING INSTALLER\n");
+        sio_printf("COULD NOT DETERMINE BOOT DEVICE FROM WORKING DIRECTORY (argv[0]). EXITING INSTALLER\n");
         Exit(-1);
     }
+    sio_printf("Boot device ID = %d\n", BootDevice);
 
     InitSemaID = IopInitStart(IOP_MOD_SET_MAIN);
 

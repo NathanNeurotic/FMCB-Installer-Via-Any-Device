@@ -2,6 +2,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <sys/stat.h>
+#include <iox_stat.h>
 
 #include "main.h"
 #include "system.h"

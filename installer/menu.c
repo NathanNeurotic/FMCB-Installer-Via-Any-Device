@@ -11,6 +11,8 @@
 #include <limits.h>
 #include <wchar.h>
 
+#include <errno.h>
+
 #include <libgs.h>
 
 #include "main.h"

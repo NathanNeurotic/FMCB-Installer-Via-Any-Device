@@ -27,3 +27,6 @@ Changes:
 - HDD APPS partition will hold OPL 1.0.0 and uLaunchELF 4.43x_isr in KELF format, ready to be executed from HDD-OSD
 - (related to previous entry) modified HDD APPS partition Header attributes to allow executiuon of uLaunchELF KELF
 - all the installers are rebuilt with ps2dev:v1.0
+- rebuilt against the latest ps2dev SDK (unified toolchain / gcc 15); build now uses `ps2dev/ps2dev:latest`
+- the installer can now be launched from **any** supported device instead of USB only — USB (FAT & exFAT/BDM, MX4SIO, iLink), memory card, internal HDD, MMCE (SD2PSX / MemCard PRO), and PCSX2 `host:`. This fixes it not launching from the FreeMcBoot / OSDMenu (previously it hard-exited unless the working directory was `mass:`)
+- added MMCE (`mmceman`) support so the installer and its `INSTALL/` payload can live on an SD2PSX / MemCard PRO card

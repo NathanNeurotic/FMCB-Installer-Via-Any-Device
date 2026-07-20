@@ -1,4 +1,5 @@
 void MainMenu(void);
+void InitProgressScreen(int label);
 void DrawFileCopyProgressScreen(float PercentageComplete);
 void DrawMemoryCardDumpingProgressScreen(float PercentageComplete, unsigned int rate, unsigned int SecondsRemaining);
 void DrawMemoryCardRestoreProgressScreen(float PercentageComplete, unsigned int rate, unsigned int SecondsRemaining);

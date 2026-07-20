@@ -8,6 +8,8 @@
 #include <limits.h>
 #include <wchar.h>
 
+#include <errno.h>
+
 #include <libgs.h>
 
 #include "main.h"
@@ -17,7 +19,8 @@
 #include "font.h"
 #include "UI.h"
 
-extern int errno __attribute__((section("data")));
+/* Modern ps2sdk/newlib defines errno as a macro (via <errno.h>); the old manual
+   `extern int errno` declaration collides with it and is no longer needed. */
 
 struct UIDrawGlobal UIDrawGlobal;
 GS_IMAGE BackgroundTexture;

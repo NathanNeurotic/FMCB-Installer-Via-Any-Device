@@ -2,17 +2,18 @@ EE_BIN = $(EE_BIN_DIR)UNC_FMCBInstaller$(HAS_EXFAT).elf
 EE_BIN_PACKED = $(EE_BIN_DIR)FMCBInstaller$(HAS_EXFAT).elf
 EXFAT ?= 0 #wether or not to use newer USB drivers so installer supports exfat devices
 #IOP modules
-EE_IOP_OBJS = IOPRP_img.o IOMANX_irx.o FILEXIO_irx.o SIO2MAN_irx.o PADMAN_irx.o MCMAN_irx.o MCSERV_irx.o SECRSIF_irx.o MCTOOLS_irx.o USBD_irx.o POWEROFF_irx.o DEV9_irx.o ATAD_irx.o HDD_irx.o PFS_irx.o
+EE_IOP_OBJS = IOPRP_img.o IOMANX_irx.o FILEXIO_irx.o SIO2MAN_irx.o PADMAN_irx.o MCMAN_irx.o MCSERV_irx.o MMCEMAN_irx.o SECRSIF_irx.o MCTOOLS_irx.o USBD_irx.o POWEROFF_irx.o DEV9_irx.o ATAD_irx.o HDD_irx.o PFS_irx.o
 IRX_DIR = irx/compiled
 
 EE_RES_OBJS = background.o buttons.o
 EE_OBJS = main.o iop.o UI.o menu.o libsecr.o pad.o system.o graphics.o ReqSpaceCalc.o font.o $(EE_RES_OBJS) $(EE_IOP_OBJS) mctools_rpc.o
 
-EE_INCS := -I$(PS2SDK)/ports/include -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I./irx/source/secrsif/src -I./irx/source/mctools/src/
+EE_INCS := -I$(PS2SDK)/ports/include -I$(PS2SDK)/ports/include/freetype2 -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I./irx/source/secrsif/src -I./irx/source/mctools/src/
 EE_LDFLAGS := -L$(PS2SDK)/ports/lib -L$(PS2SDK)/ee/lib -L$(PS2DEV)/ee/ee/lib -Tlinkfile -s
 EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfileXio -lpatches -liopreboot -lc -lkernel
-EE_GPVAL = -G8192
-EE_CFLAGS += -Os -mgpopt $(EE_GPVAL)
+# Modern ps2sdk (unified toolchain) needs -D_EE and -DNEWLIB_PORT_AWARE (this code
+# uses fileXio directly), and uses -G0 instead of the old small-data -mgpopt/-G8192.
+EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os
 
 ifeq ($(EXFAT), 1)
     HAS_EXFAT = _EXFAT
@@ -39,8 +40,10 @@ endif
 %.o : %.s
 	$(EE_AS) $(EE_ASFLAGS) $< -o $@
 
-$(EE_BIN) : $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o
-	$(EE_CC) $(EE_CFLAGS) -nostartfiles $(EE_LDFLAGS) -o $(EE_BIN) $(EE_OBJS) $(PS2SDK)/ee/startup/crt0.o $(EE_LIBS)
+# Modern ps2sdk no longer ships a prebuilt crt0.o; the toolchain links its own
+# crt0 (entry __start, see linkfile), so we drop -nostartfiles / the explicit crt0.o.
+$(EE_BIN) : $(EE_OBJS)
+	$(EE_CC) $(EE_CFLAGS) $(EE_LDFLAGS) -o $(EE_BIN) $(EE_OBJS) $(EE_LIBS)
 
 all: $(EE_BIN)
 
@@ -82,6 +85,9 @@ MCMAN_irx.c: $(PS2SDK)/iop/irx/mcman.irx
 
 MCSERV_irx.c: $(PS2SDK)/iop/irx/mcserv.irx
 	bin2c $< $@ MCSERV_irx
+
+MMCEMAN_irx.c: $(PS2SDK)/iop/irx/mmceman.irx
+	bin2c $< $@ MMCEMAN_irx
 
 SECRSIF_irx.c: $(IRX_DIR)/secrsif.irx
 	bin2c $< $@ SECRSIF_irx

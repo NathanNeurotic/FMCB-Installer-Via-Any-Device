@@ -14,7 +14,7 @@ on:
 jobs:
   build-packages:
     runs-on: ubuntu-latest
-    container: ps2dev/ps2dev:v1.0
+    container: ps2dev/ps2dev:latest
     steps:
     - name: Install dependencies
       run: |

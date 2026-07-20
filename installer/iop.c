@@ -16,6 +16,10 @@
 #include "main.h"
 #include "iop.h"
 #include "system.h"
+#include "pad.h"
+#include "mctools_rpc.h"
+#include "libsecr.h"
+#include <unistd.h>
 #define IMPORT_IRX(_IRX) \
 extern unsigned char _IRX[]; \
 extern unsigned int size_##_IRX;
@@ -26,6 +30,7 @@ IMPORT_IRX(SIO2MAN_irx);
 IMPORT_IRX(PADMAN_irx);
 IMPORT_IRX(MCMAN_irx);
 IMPORT_IRX(MCSERV_irx);
+IMPORT_IRX(MMCEMAN_irx);
 IMPORT_IRX(SECRSIF_irx);
 IMPORT_IRX(MCTOOLS_irx);
 IMPORT_IRX(USBD_irx);
@@ -137,6 +142,10 @@ int IopInitStart(unsigned int flags)
     SifExecModuleBuffer(PADMAN_irx, size_PADMAN_irx, 0, NULL, NULL);
     SifExecModuleBuffer(MCMAN_irx, size_MCMAN_irx, 0, NULL, NULL);
     SifExecModuleBuffer(MCSERV_irx, size_MCSERV_irx, 0, NULL, NULL);
+    // MMCE (SD2PSX / MemCard PRO) support, so the installer can be launched from
+    // and read its payload off an SD card (mmce0:/mmce1:). Rides the SIO2 bus via
+    // the already-loaded freesio2; coexists with mcman (separate "mmce" namespace).
+    SifExecModuleBuffer(MMCEMAN_irx, size_MMCEMAN_irx, 0, NULL, NULL);
 
 #ifdef EXFAT
     SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);

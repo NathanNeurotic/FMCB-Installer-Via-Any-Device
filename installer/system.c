@@ -19,6 +19,10 @@
 
 #include <sys/stat.h>
 #include <sys/fcntl.h>
+#include <errno.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <io_common.h>
 
 #include <libgs.h>
 
@@ -36,7 +40,8 @@
 #define IO_BLOCK_SIZE (256 * 512)
 
 extern void *_gp;
-extern int errno __attribute__((section("data")));
+/* Modern ps2sdk/newlib defines errno as a macro (via <errno.h>); the old manual
+   `extern int errno` declaration collides with it and is no longer needed. */
 extern unsigned short int SelectButton, CancelButton;
 extern u8 dev9Loaded;
 extern int InstallLockSema;
@@ -77,8 +82,23 @@ int GetBootDeviceID(void)
     if (BootDevice < BOOT_DEVICE_UNKNOWN) {
         getcwd(path, sizeof(path));
 
-        if (!strncmp(path, "mass:", 5) || !strncmp(path, "mass0:", 6))
+        /* On the EE there is no kernel notion of a working directory: ps2sdk's
+           crt0 derives it once at startup from argv[0] (the directory the ELF was
+           launched from, keeping the trailing '/'). So getcwd() already points at
+           our own folder on whatever device we were booted from, and the INSTALL/
+           payload sits right next to us. Classify the device from the prefix so
+           the installer can run from ANY supported device, not only USB.
+           NOTE: check "mmce" before "mc" (both start with 'm'). */
+        if (!strncmp(path, "mass", 4)) // "mass:" (usbhdfsd) or "mass0:" (BDM: exFAT USB / MX4SIO / iLink)
             result = BOOT_DEVICE_MASS;
+        else if (!strncmp(path, "mmce", 4)) // SD2PSX / MemCard PRO (mmce0:/mmce1:)
+            result = BOOT_DEVICE_MMCE;
+        else if (!strncmp(path, "mc", 2)) // Memory card (mc0:/mc1:)
+            result = BOOT_DEVICE_MC;
+        else if (!strncmp(path, "hdd", 3) || !strncmp(path, "pfs", 3)) // Internal HDD (hdd0:/pfs0:)
+            result = BOOT_DEVICE_HDD;
+        else if (!strncmp(path, "host", 4)) // PCSX2 host: (development)
+            result = BOOT_DEVICE_HOST;
         else
             result = BOOT_DEVICE_UNKNOWN;
 

@@ -1,6 +1,10 @@
 enum BootDeviceIDs {
     BOOT_DEVICE_UNKNOWN = -1,
-    BOOT_DEVICE_MASS,
+    BOOT_DEVICE_MASS, // USB: "mass:" (usbhdfsd) / "mass0:" (BDM: exFAT USB, MX4SIO, iLink)
+    BOOT_DEVICE_MC,   // Memory card: mc0:/mc1:
+    BOOT_DEVICE_HDD,  // Internal HDD: hdd0:/pfs0:
+    BOOT_DEVICE_MMCE, // SD2PSX / MemCard PRO: mmce0:/mmce1:
+    BOOT_DEVICE_HOST, // PCSX2 host: (development)
 
     BOOT_DEVICE_COUNT,
 };
