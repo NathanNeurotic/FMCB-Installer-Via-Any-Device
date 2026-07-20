@@ -34,13 +34,17 @@ IMPORT_IRX(MMCEMAN_irx);
 IMPORT_IRX(SECRSIF_irx);
 IMPORT_IRX(MCTOOLS_irx);
 IMPORT_IRX(USBD_irx);
-#ifdef EXFAT
+/* Both USB filesystem stacks are embedded; only one is loaded at runtime,
+   picked from the launch path (see below). They cannot coexist (both bind the
+   USB mass-storage class), so we never load both.
+     - BDM (bdm + bdmfs_fatfs + usbmass_bd): FAT32 AND exFAT, plus MX4SIO/iLink,
+       mounted as "mass0:". This is the default.
+     - usbhdfsd: legacy FAT-only "mass:" driver, used only when the installer was
+       launched from a bare "mass:" path (an old usbhdfsd-based launcher). */
 IMPORT_IRX(usbmass_bd_irx);
 IMPORT_IRX(bdm_irx);
 IMPORT_IRX(bdmfs_fatfs_irx);
-#else
 IMPORT_IRX(USBHDFSD_irx);
-#endif
 IMPORT_IRX(POWEROFF_irx);
 IMPORT_IRX(DEV9_irx);
 IMPORT_IRX(ATAD_irx);
@@ -147,18 +151,25 @@ int IopInitStart(unsigned int flags)
     // the already-loaded freesio2; coexists with mcman (separate "mmce" namespace).
     SifExecModuleBuffer(MMCEMAN_irx, size_MMCEMAN_irx, 0, NULL, NULL);
 
-#ifdef EXFAT
-    SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
-    SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
-#endif
+    /* Lazy-load the USB driver that matches how we were launched (arg0 -> cwd).
+       Default to the BDM stack (FAT32 + exFAT, mass0:); fall back to the legacy
+       usbhdfsd driver only when launched from a bare "mass:" path so those old
+       launchers keep working. This is what lets a single build boot from any
+       device without the old FAT32/exFAT variant split. */
+    int useLegacyUSB = IsLegacyMassBoot();
+
+    if (!useLegacyUSB) {
+        SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
+        SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
+    }
 
     SifExecModuleBuffer(USBD_irx, size_USBD_irx, 0, NULL, NULL);
 
-#ifdef EXFAT
-    SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
-#else
-    SifExecModuleBuffer(USBHDFSD_irx, size_USBHDFSD_irx, 0, NULL, NULL);
-#endif
+    if (!useLegacyUSB) {
+        SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
+    } else {
+        SifExecModuleBuffer(USBHDFSD_irx, size_USBHDFSD_irx, 0, NULL, NULL);
+    }
     sleep(5);
 
     SysCreateThread(SystemInitThread, SysInitThreadStack, SYSTEM_INIT_THREAD_STACK_SIZE, &InitThreadParams, 0x2);

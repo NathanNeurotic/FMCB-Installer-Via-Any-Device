@@ -1,6 +1,5 @@
-EE_BIN = $(EE_BIN_DIR)UNC_FMCBInstaller$(HAS_EXFAT).elf
-EE_BIN_PACKED = $(EE_BIN_DIR)FMCBInstaller$(HAS_EXFAT).elf
-EXFAT ?= 0 #wether or not to use newer USB drivers so installer supports exfat devices
+EE_BIN = $(EE_BIN_DIR)UNC_FMCBInstaller.elf
+EE_BIN_PACKED = $(EE_BIN_DIR)FMCBInstaller.elf
 #IOP modules
 EE_IOP_OBJS = IOPRP_img.o IOMANX_irx.o FILEXIO_irx.o SIO2MAN_irx.o PADMAN_irx.o MCMAN_irx.o MCSERV_irx.o MMCEMAN_irx.o SECRSIF_irx.o MCTOOLS_irx.o USBD_irx.o POWEROFF_irx.o DEV9_irx.o ATAD_irx.o HDD_irx.o PFS_irx.o
 IRX_DIR = irx/compiled
@@ -15,13 +14,10 @@ EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfi
 # uses fileXio directly), and uses -G0 instead of the old small-data -mgpopt/-G8192.
 EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os
 
-ifeq ($(EXFAT), 1)
-    HAS_EXFAT = _EXFAT
-    EE_CFLAGS += -DEXFAT
-    EE_OBJS += usbmass_bd_irx.o bdm_irx.o bdmfs_fatfs_irx.o
-else
-    EE_OBJS += USBHDFSD_irx.o
-endif
+# Single "any device" build: embed BOTH USB filesystem stacks. iop.c loads only
+# one at runtime, chosen from the launch path -- the BDM stack (FAT32 + exFAT,
+# plus MX4SIO/iLink) by default, or the legacy usbhdfsd driver for bare "mass:".
+EE_OBJS += usbmass_bd_irx.o bdm_irx.o bdmfs_fatfs_irx.o USBHDFSD_irx.o
 
 ifeq ($(DEBUG),1)
     EE_CFLAGS += -DDEBUG_TTY_FEEDBACK
@@ -98,7 +94,6 @@ MCTOOLS_irx.c: $(IRX_DIR)/mctools.irx
 USBD_irx.c: $(PS2SDK)/iop/irx/usbd.irx
 	bin2c $< $@ USBD_irx
 
-ifeq ($(EXFAT), 1)
 usbmass_bd_irx.c: $(IRX_DIR)/usbmass_bd.irx
 	bin2c $< $@ usbmass_bd_irx
 
@@ -108,10 +103,8 @@ bdm_irx.c: $(IRX_DIR)/bdm.irx
 bdmfs_fatfs_irx.c: $(IRX_DIR)/bdmfs_fatfs.irx
 	bin2c $< $@ bdmfs_fatfs_irx
 
-else
 USBHDFSD_irx.c: $(PS2SDK)/iop/irx/usbhdfsd.irx
 	bin2c $< $@ USBHDFSD_irx
-endif
 
 IOPRP_img.c: $(IRX_DIR)/IOPRP.img
 	bin2c $< $@ IOPRP_img

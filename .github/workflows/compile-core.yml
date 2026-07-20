@@ -35,8 +35,7 @@ jobs:
     - name: Compile
       run: |
         cd installer
-        make rebuild FMCB_INSTALLER_VERSION=${{ env.SHA8 }} EE_BIN_DIR=../installer_res/ 
-        make rebuild FMCB_INSTALLER_VERSION=${{ env.SHA8 }} EE_BIN_DIR=../installer_res/ EXFAT=1
+        make rebuild FMCB_INSTALLER_VERSION=${{ env.SHA8 }} EE_BIN_DIR=../installer_res/
 
     - name: Prepare folder for Release
       run: |

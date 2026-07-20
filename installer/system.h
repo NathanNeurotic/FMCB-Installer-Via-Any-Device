@@ -101,6 +101,7 @@ struct WorkerThreadMcMaintParams
 
 /* Function prototypes */
 int GetBootDeviceID(void);
+int IsLegacyMassBoot(void);
 int GetConsoleRegion(void);
 int GetConsoleVMode(void);
 int CleanupTarget(int port, int slot);

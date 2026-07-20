@@ -13,7 +13,6 @@ do
     echo "title=FreeMcBoot v$subdir $PKG_DATE" >$NEWDIR/title.cfg
     echo "boot=FMCBInstaller.elf">>$NEWDIR/title.cfg
     cp FMCBInstaller.elf $NEWDIR/
-    cp FMCBInstaller_EXFAT.elf $NEWDIR/
     mkdir -p $NEWDIR/FMCB_EXFAT/
     cp -r READY_TO_USE/FreeMcBoot/SYS-CONF/ $NEWDIR/FMCB_EXFAT/
     cp EXFAT_INSTALL_INSTRUCTIONS.TXT $NEWDIR/FMCB_EXFAT/INSTRUCTIONS.TXT

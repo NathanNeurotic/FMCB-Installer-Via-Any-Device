@@ -109,6 +109,19 @@ int GetBootDeviceID(void)
     return result;
 }
 
+/* True when the installer was launched from a bare "mass:" path (an old
+   usbhdfsd-based launcher) rather than "mass0:" (BDM) or another device. Used to
+   pick the matching USB driver at startup so a single build works with both the
+   legacy and the modern USB stacks. */
+int IsLegacyMassBoot(void)
+{
+    char path[256];
+
+    getcwd(path, sizeof(path));
+
+    return (!strncmp(path, "mass:", 5));
+}
+
 int GetConsoleRegion(void)
 {
     static int region = -1;

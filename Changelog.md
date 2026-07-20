@@ -30,3 +30,4 @@ Changes:
 - rebuilt against the latest ps2dev SDK (unified toolchain / gcc 15); build now uses `ps2dev/ps2dev:latest`
 - the installer can now be launched from **any** supported device instead of USB only — USB (FAT & exFAT/BDM, MX4SIO, iLink), memory card, internal HDD, MMCE (SD2PSX / MemCard PRO), and PCSX2 `host:`. This fixes it not launching from the FreeMcBoot / OSDMenu (previously it hard-exited unless the working directory was `mass:`)
 - added MMCE (`mmceman`) support so the installer and its `INSTALL/` payload can live on an SD2PSX / MemCard PRO card
+- merged the separate FAT32 and exFAT installer builds into a single `FMCBInstaller.elf`. It embeds both USB stacks and loads the right one from the launch path at runtime: the BDM stack (FAT32 **and** exFAT, plus MX4SIO / iLink, `mass0:`) by default, falling back to the legacy `usbhdfsd` driver only when launched from a bare `mass:` path. No more `FMCBInstaller_EXFAT.elf`
