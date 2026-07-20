@@ -136,6 +136,26 @@ int IsLegacyMassBoot(void)
    the payload resolves no matter which naming the launcher used. Everything else
    (massN:, bare mass:, mc:, mmce:, hdd:/pfs:, cdfs:, host:) is used verbatim.
    NOTE: getcwd() keeps the trailing '/', so we just append "INSTALL". */
+#ifdef DIAG_INSTALL_PATH
+// On-screen diagnostic: show how we resolved the boot device + payload path and
+// whether the INSTALL/ folder is actually readable. Enabled only in diag builds.
+static void ShowInstallPathDiag(const char *root)
+{
+    char dbg[512], cwd[256];
+    int fd;
+
+    getcwd(cwd, sizeof(cwd));
+    fd = fileXioDopen(root);
+    if (fd >= 0)
+        fileXioDclose(fd);
+
+    snprintf(dbg, sizeof(dbg),
+             "BootDev=%d  Legacy=%d\ncwd=[%s]\nroot=[%s]\nDopen(root)=%d",
+             GetBootDeviceID(), IsLegacyMassBoot(), cwd, root, fd);
+    ShowMessageBox(SYS_UI_LBL_OK, -1, -1, -1, dbg, SYS_UI_LBL_WARNING);
+}
+#endif
+
 void GetInstallRootPath(char *out, int outlen)
 {
     char cwd[256];
@@ -1278,6 +1298,9 @@ int PerformHDDInstallation(unsigned int flags)
     char RootFolder[256];
 
     GetInstallRootPath(RootFolder, sizeof(RootFolder));
+#ifdef DIAG_INSTALL_PATH
+    ShowInstallPathDiag(RootFolder);
+#endif
 
     // Generate the file copy list.
     NumFiles = HDD_BASE_INSTALL_NUM_FILES;
@@ -1452,6 +1475,9 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
     }
 
     GetInstallRootPath(RootFolder, sizeof(RootFolder));
+#ifdef DIAG_INSTALL_PATH
+    ShowInstallPathDiag(RootFolder);
+#endif
 
     WaitSema(InstallLockSema);
 

@@ -12,7 +12,7 @@ EE_LDFLAGS := -L$(PS2SDK)/ports/lib -L$(PS2SDK)/ee/lib -L$(PS2DEV)/ee/ee/lib -Tl
 EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfileXio -lpatches -liopreboot -lc -lkernel
 # Modern ps2sdk (unified toolchain) needs -D_EE and -DNEWLIB_PORT_AWARE (this code
 # uses fileXio directly), and uses -G0 instead of the old small-data -mgpopt/-G8192.
-EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os
+EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os $(EXTRA_CFLAGS)
 
 # Single "any device" build: embed every storage backend. iop.c loads only the
 # one matching the launch path at runtime (R3Z-style): BDM core (bdm/bdmfs_fatfs)
