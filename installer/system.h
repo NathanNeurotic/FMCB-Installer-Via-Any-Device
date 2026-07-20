@@ -1,10 +1,13 @@
 enum BootDeviceIDs {
     BOOT_DEVICE_UNKNOWN = -1,
-    BOOT_DEVICE_MASS, // USB: "mass:" (usbhdfsd) / "mass0:" (BDM: exFAT USB, MX4SIO, iLink)
-    BOOT_DEVICE_MC,   // Memory card: mc0:/mc1:
-    BOOT_DEVICE_HDD,  // Internal HDD: hdd0:/pfs0:
-    BOOT_DEVICE_MMCE, // SD2PSX / MemCard PRO: mmce0:/mmce1:
-    BOOT_DEVICE_HOST, // PCSX2 host: (development)
+    BOOT_DEVICE_MASS,   // USB via BDM ("massN:"/"usbN:") or legacy usbhdfsd (bare "mass:")
+    BOOT_DEVICE_MC,     // Memory card: mc0:/mc1:
+    BOOT_DEVICE_HDD,    // Internal HDD (APA/PFS): hdd0:/pfs0:
+    BOOT_DEVICE_MMCE,   // SD2PSX / MemCard PRO SD: mmce0:/mmce1:
+    BOOT_DEVICE_MX4SIO, // MX4SIO SD (SPI SD in the MC slot): mx4sio0:
+    BOOT_DEVICE_ATA,    // FAT/exFAT partition on the ATA bus via BDM: ata0:
+    BOOT_DEVICE_CDFS,   // Disc: cdfs:/cdrom0:
+    BOOT_DEVICE_HOST,   // PCSX2 host: (development)
 
     BOOT_DEVICE_COUNT,
 };
@@ -102,6 +105,7 @@ struct WorkerThreadMcMaintParams
 /* Function prototypes */
 int GetBootDeviceID(void);
 int IsLegacyMassBoot(void);
+void GetInstallRootPath(char *out, int outlen);
 int GetConsoleRegion(void);
 int GetConsoleVMode(void);
 int CleanupTarget(int port, int slot);

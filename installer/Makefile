@@ -14,10 +14,11 @@ EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfi
 # uses fileXio directly), and uses -G0 instead of the old small-data -mgpopt/-G8192.
 EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os
 
-# Single "any device" build: embed BOTH USB filesystem stacks. iop.c loads only
-# one at runtime, chosen from the launch path -- the BDM stack (FAT32 + exFAT,
-# plus MX4SIO/iLink) by default, or the legacy usbhdfsd driver for bare "mass:".
-EE_OBJS += usbmass_bd_irx.o bdm_irx.o bdmfs_fatfs_irx.o USBHDFSD_irx.o
+# Single "any device" build: embed every storage backend. iop.c loads only the
+# one matching the launch path at runtime (R3Z-style): BDM core (bdm/bdmfs_fatfs)
+# + one of usbmass_bd / mx4sio_bd / ata_bd, legacy usbhdfsd for bare "mass:", plus
+# cdfs for disc. (mmceman is in EE_IOP_OBJS above.)
+EE_OBJS += bdm_irx.o bdmfs_fatfs_irx.o usbmass_bd_irx.o mx4sio_bd_irx.o ata_bd_irx.o USBHDFSD_irx.o CDFS_irx.o
 
 ifeq ($(DEBUG),1)
     EE_CFLAGS += -DDEBUG_TTY_FEEDBACK
@@ -94,17 +95,28 @@ MCTOOLS_irx.c: $(IRX_DIR)/mctools.irx
 USBD_irx.c: $(PS2SDK)/iop/irx/usbd.irx
 	bin2c $< $@ USBD_irx
 
-usbmass_bd_irx.c: $(IRX_DIR)/usbmass_bd.irx
-	bin2c $< $@ usbmass_bd_irx
-
-bdm_irx.c: $(IRX_DIR)/bdm.irx
+# BDM stack pulled from the SDK (matched versions + per-transport typed-driver
+# names "usbN:"/"mx4sioN:"/"ataN:"), not the older committed irx/compiled copies.
+bdm_irx.c: $(PS2SDK)/iop/irx/bdm.irx
 	bin2c $< $@ bdm_irx
 
-bdmfs_fatfs_irx.c: $(IRX_DIR)/bdmfs_fatfs.irx
+bdmfs_fatfs_irx.c: $(PS2SDK)/iop/irx/bdmfs_fatfs.irx
 	bin2c $< $@ bdmfs_fatfs_irx
+
+usbmass_bd_irx.c: $(PS2SDK)/iop/irx/usbmass_bd.irx
+	bin2c $< $@ usbmass_bd_irx
+
+mx4sio_bd_irx.c: $(PS2SDK)/iop/irx/mx4sio_bd.irx
+	bin2c $< $@ mx4sio_bd_irx
+
+ata_bd_irx.c: $(PS2SDK)/iop/irx/ata_bd.irx
+	bin2c $< $@ ata_bd_irx
 
 USBHDFSD_irx.c: $(PS2SDK)/iop/irx/usbhdfsd.irx
 	bin2c $< $@ USBHDFSD_irx
+
+CDFS_irx.c: $(PS2SDK)/iop/irx/cdfs.irx
+	bin2c $< $@ CDFS_irx
 
 IOPRP_img.c: $(IRX_DIR)/IOPRP.img
 	bin2c $< $@ IOPRP_img

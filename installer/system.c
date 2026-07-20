@@ -86,17 +86,24 @@ int GetBootDeviceID(void)
            crt0 derives it once at startup from argv[0] (the directory the ELF was
            launched from, keeping the trailing '/'). So getcwd() already points at
            our own folder on whatever device we were booted from, and the INSTALL/
-           payload sits right next to us. Classify the device from the prefix so
-           the installer can run from ANY supported device, not only USB.
-           NOTE: check "mmce" before "mc" (both start with 'm'). */
-        if (!strncmp(path, "mass", 4)) // "mass:" (usbhdfsd) or "mass0:" (BDM: exFAT USB / MX4SIO / iLink)
+           payload sits right next to us. Classify the transport from the prefix
+           (the way wLaunchELF-R3Z does) so we can load only the matching backend.
+           NOTE: mass/usb/mmce/mx4sio/mc/ata/hdd all need careful ordering because
+           several share a leading letter; they differ within the first few chars. */
+        if (!strncmp(path, "mass", 4) || !strncmp(path, "usb", 3)) // USB (BDM "massN:"/"usbN:" or legacy "mass:")
             result = BOOT_DEVICE_MASS;
-        else if (!strncmp(path, "mmce", 4)) // SD2PSX / MemCard PRO (mmce0:/mmce1:)
+        else if (!strncmp(path, "mmce", 4)) // SD2PSX / MemCard PRO SD (mmce0:/mmce1:)
             result = BOOT_DEVICE_MMCE;
+        else if (!strncmp(path, "mx4sio", 6)) // MX4SIO SPI SD (mx4sio0:)
+            result = BOOT_DEVICE_MX4SIO;
         else if (!strncmp(path, "mc", 2)) // Memory card (mc0:/mc1:)
             result = BOOT_DEVICE_MC;
-        else if (!strncmp(path, "hdd", 3) || !strncmp(path, "pfs", 3)) // Internal HDD (hdd0:/pfs0:)
+        else if (!strncmp(path, "ata", 3)) // FAT/exFAT on the ATA bus via BDM (ata0:)
+            result = BOOT_DEVICE_ATA;
+        else if (!strncmp(path, "hdd", 3) || !strncmp(path, "pfs", 3)) // Internal HDD APA/PFS (hdd0:/pfs0:)
             result = BOOT_DEVICE_HDD;
+        else if (!strncmp(path, "cdfs", 4) || !strncmp(path, "cdrom", 5)) // Disc (cdfs:/cdrom0:)
+            result = BOOT_DEVICE_CDFS;
         else if (!strncmp(path, "host", 4)) // PCSX2 host: (development)
             result = BOOT_DEVICE_HOST;
         else
@@ -120,6 +127,33 @@ int IsLegacyMassBoot(void)
     getcwd(path, sizeof(path));
 
     return (!strncmp(path, "mass:", 5));
+}
+
+/* Build the path to our INSTALL/ payload folder (which sits next to the ELF).
+   bdmfs_fatfs always registers the generic "massN:" device, and we load only ONE
+   BDM backend at a time (so unit N maps to massN). If the launcher handed us a
+   per-transport BDM alias (usbN:/mx4sioN:/ataN:), rewrite the device to massN: so
+   the payload resolves no matter which naming the launcher used. Everything else
+   (massN:, bare mass:, mc:, mmce:, hdd:/pfs:, cdfs:, host:) is used verbatim.
+   NOTE: getcwd() keeps the trailing '/', so we just append "INSTALL". */
+void GetInstallRootPath(char *out, int outlen)
+{
+    char cwd[256];
+    const char *colon;
+
+    getcwd(cwd, sizeof(cwd));
+
+    if ((!strncmp(cwd, "usb", 3) && (cwd[3] == ':' || (cwd[3] >= '0' && cwd[3] <= '9'))) ||
+        (!strncmp(cwd, "mx4sio", 6) && (cwd[6] == ':' || (cwd[6] >= '0' && cwd[6] <= '9'))) ||
+        (!strncmp(cwd, "ata", 3) && (cwd[3] >= '0' && cwd[3] <= '9'))) {
+        if ((colon = strchr(cwd, ':')) != NULL) {
+            char unit = (colon > cwd && colon[-1] >= '0' && colon[-1] <= '9') ? colon[-1] : '0';
+            snprintf(out, outlen, "mass%c:%sINSTALL", unit, colon + 1);
+            return;
+        }
+    }
+
+    snprintf(out, outlen, "%sINSTALL", cwd);
 }
 
 int GetConsoleRegion(void)
@@ -1243,8 +1277,7 @@ int PerformHDDInstallation(unsigned int flags)
     u32 FreeSectors;
     char RootFolder[256];
 
-    getcwd(RootFolder, sizeof(RootFolder) - 8);
-    strcat(RootFolder, "INSTALL");
+    GetInstallRootPath(RootFolder, sizeof(RootFolder));
 
     // Generate the file copy list.
     NumFiles = HDD_BASE_INSTALL_NUM_FILES;
@@ -1418,8 +1451,7 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
         MGLetter = 'I';
     }
 
-    getcwd(RootFolder, sizeof(RootFolder) - 8);
-    strcat(RootFolder, "INSTALL");
+    GetInstallRootPath(RootFolder, sizeof(RootFolder));
 
     WaitSema(InstallLockSema);
 

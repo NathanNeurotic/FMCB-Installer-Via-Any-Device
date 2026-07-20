@@ -30,4 +30,13 @@ Changes:
 - rebuilt against the latest ps2dev SDK (unified toolchain / gcc 15); build now uses `ps2dev/ps2dev:latest`
 - the installer can now be launched from **any** supported device instead of USB only — USB (FAT & exFAT/BDM, MX4SIO, iLink), memory card, internal HDD, MMCE (SD2PSX / MemCard PRO), and PCSX2 `host:`. This fixes it not launching from the FreeMcBoot / OSDMenu (previously it hard-exited unless the working directory was `mass:`)
 - added MMCE (`mmceman`) support so the installer and its `INSTALL/` payload can live on an SD2PSX / MemCard PRO card
-- merged the separate FAT32 and exFAT installer builds into a single `FMCBInstaller.elf`. It embeds both USB stacks and loads the right one from the launch path at runtime: the BDM stack (FAT32 **and** exFAT, plus MX4SIO / iLink, `mass0:`) by default, falling back to the legacy `usbhdfsd` driver only when launched from a bare `mass:` path. No more `FMCBInstaller_EXFAT.elf`
+- merged the separate FAT32 and exFAT installer builds into a single `FMCBInstaller.elf`. No more `FMCBInstaller_EXFAT.elf`
+- the single build now detects its boot transport from `argv[0]` and loads **only** the matching storage backend at runtime (the way wLaunchELF-R3Z does), so it is compatible with whatever device/naming a launcher hands it without loading every backend at once:
+  * USB via BDM (`massN:`/`usbN:`, FAT32 **and** exFAT) — default
+  * MX4SIO SD (`mx4sioN:`)
+  * ATA/BDM FAT partition (`ataN:`)
+  * SD2PSX / MemCard PRO SD via MMCE (`mmceN:`)
+  * disc via CDFS (`cdfs:`)
+  * memory card (`mcN:`), internal HDD (`hddN:`/`pfsN:`), and PCSX2 `host:`
+  * legacy `usbhdfsd` for a bare `mass:` launch
+  The BDM modules now come from the SDK (per-transport typed-driver names); per-transport aliases are normalized to the always-present `massN:` when locating the `INSTALL/` payload

@@ -34,17 +34,22 @@ IMPORT_IRX(MMCEMAN_irx);
 IMPORT_IRX(SECRSIF_irx);
 IMPORT_IRX(MCTOOLS_irx);
 IMPORT_IRX(USBD_irx);
-/* Both USB filesystem stacks are embedded; only one is loaded at runtime,
-   picked from the launch path (see below). They cannot coexist (both bind the
-   USB mass-storage class), so we never load both.
-     - BDM (bdm + bdmfs_fatfs + usbmass_bd): FAT32 AND exFAT, plus MX4SIO/iLink,
-       mounted as "mass0:". This is the default.
-     - usbhdfsd: legacy FAT-only "mass:" driver, used only when the installer was
-       launched from a bare "mass:" path (an old usbhdfsd-based launcher). */
+/* All storage backends are embedded; at runtime we load ONLY the one matching
+   the device we were launched from (see LoadBootDeviceModules). This keeps a
+   single build compatible with any launcher/device the way wLaunchELF-R3Z is,
+   without loading every backend at once (e.g. MX4SIO must NOT probe the memory
+   card slot during a normal MC install).
+     BDM core:  bdm + bdmfs_fatfs (FAT32/exFAT, registers "massN:" + typed names)
+     backends:  usbmass_bd (USB), mx4sio_bd (MX4SIO SD), ata_bd (ATA)
+     legacy:    usbhdfsd (bare "mass:" from old usbhdfsd launchers)
+     others:    mmceman (SD2PSX/MemCard PRO SD), cdfs (disc) */
 IMPORT_IRX(usbmass_bd_irx);
+IMPORT_IRX(mx4sio_bd_irx);
+IMPORT_IRX(ata_bd_irx);
 IMPORT_IRX(bdm_irx);
 IMPORT_IRX(bdmfs_fatfs_irx);
 IMPORT_IRX(USBHDFSD_irx);
+IMPORT_IRX(CDFS_irx);
 IMPORT_IRX(POWEROFF_irx);
 IMPORT_IRX(DEV9_irx);
 IMPORT_IRX(ATAD_irx);
@@ -92,6 +97,58 @@ static void SystemInitThread(struct SystemInitParams *SystemInitParams)
 
     SignalSema(SystemInitParams->InitCompleteSema);
     ExitDeleteThread();
+}
+
+/* Load the single storage backend needed to read the INSTALL/ payload from the
+   device we were launched from. Only one BDM backend is ever loaded, so the boot
+   device is unambiguously "massN:" (and its typed alias); GetInstallRootPath()
+   normalizes the payload path accordingly. */
+static void LoadBootDeviceModules(void)
+{
+    switch (GetBootDeviceID()) {
+        case BOOT_DEVICE_MASS:
+            SifExecModuleBuffer(USBD_irx, size_USBD_irx, 0, NULL, NULL);
+            if (IsLegacyMassBoot()) {
+                // Bare "mass:" -> legacy usbhdfsd (FAT only).
+                SifExecModuleBuffer(USBHDFSD_irx, size_USBHDFSD_irx, 0, NULL, NULL);
+            } else {
+                // "massN:"/"usbN:" -> BDM USB (FAT32 + exFAT).
+                SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
+                SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
+                SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
+            }
+            break;
+        case BOOT_DEVICE_MX4SIO:
+            // MX4SIO SD (SPI SD in the MC slot) -> BDM.
+            SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
+            SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
+            SifExecModuleBuffer(mx4sio_bd_irx, size_mx4sio_bd_irx, 0, NULL, NULL);
+            break;
+        case BOOT_DEVICE_ATA:
+            // FAT/exFAT partition on the ATA bus -> BDM. NOTE: ata_bd drives the
+            // ATA controller and may clash with ps2atad (the APA/HDD-install driver
+            // loaded in SystemInitThread); this only affects installs booted from ATA.
+            SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
+            SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
+            SifExecModuleBuffer(ata_bd_irx, size_ata_bd_irx, 0, NULL, NULL);
+            break;
+        case BOOT_DEVICE_MMCE:
+            // SD2PSX / MemCard PRO SD (mmce0:). Rides SIO2 via freesio2 and coexists
+            // with mcman; loaded only for an MMCE boot so it never clashes with
+            // MX4SIO nor probes a real MC during an MC install.
+            SifExecModuleBuffer(MMCEMAN_irx, size_MMCEMAN_irx, 0, NULL, NULL);
+            break;
+        case BOOT_DEVICE_CDFS:
+            // Disc (cdfs:).
+            SifExecModuleBuffer(CDFS_irx, size_CDFS_irx, 0, NULL, NULL);
+            break;
+        case BOOT_DEVICE_MC:
+        case BOOT_DEVICE_HDD:
+        case BOOT_DEVICE_HOST:
+        default:
+            // mc:/hdd:/pfs: already available; host: is provided by the emulator.
+            break;
+    }
 }
 
 int IopInitStart(unsigned int flags)
@@ -146,30 +203,13 @@ int IopInitStart(unsigned int flags)
     SifExecModuleBuffer(PADMAN_irx, size_PADMAN_irx, 0, NULL, NULL);
     SifExecModuleBuffer(MCMAN_irx, size_MCMAN_irx, 0, NULL, NULL);
     SifExecModuleBuffer(MCSERV_irx, size_MCSERV_irx, 0, NULL, NULL);
-    // MMCE (SD2PSX / MemCard PRO) support, so the installer can be launched from
-    // and read its payload off an SD card (mmce0:/mmce1:). Rides the SIO2 bus via
-    // the already-loaded freesio2; coexists with mcman (separate "mmce" namespace).
-    SifExecModuleBuffer(MMCEMAN_irx, size_MMCEMAN_irx, 0, NULL, NULL);
 
-    /* Lazy-load the USB driver that matches how we were launched (arg0 -> cwd).
-       Default to the BDM stack (FAT32 + exFAT, mass0:); fall back to the legacy
-       usbhdfsd driver only when launched from a bare "mass:" path so those old
-       launchers keep working. This is what lets a single build boot from any
-       device without the old FAT32/exFAT variant split. */
-    int useLegacyUSB = IsLegacyMassBoot();
-
-    if (!useLegacyUSB) {
-        SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
-        SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
-    }
-
-    SifExecModuleBuffer(USBD_irx, size_USBD_irx, 0, NULL, NULL);
-
-    if (!useLegacyUSB) {
-        SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
-    } else {
-        SifExecModuleBuffer(USBHDFSD_irx, size_USBHDFSD_irx, 0, NULL, NULL);
-    }
+    /* Bring up ONLY the storage backend for the device we booted from (from
+       argv[0]/cwd), the way wLaunchELF-R3Z does, so the INSTALL/ payload is
+       readable regardless of launcher/device. The memory card (mc:) and internal
+       HDD (hdd:/pfs:, loaded in SystemInitThread) are the install *targets* and
+       are always available; this only adds the driver to READ the payload. */
+    LoadBootDeviceModules();
     sleep(5);
 
     SysCreateThread(SystemInitThread, SysInitThreadStack, SYSTEM_INIT_THREAD_STACK_SIZE, &InitThreadParams, 0x2);
