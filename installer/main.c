@@ -77,16 +77,7 @@ int main(int argc, char *argv[])
     }
     sio_printf("Boot device ID = %d\n", BootDevice);
 
-    /* Booting from ATA (BDM) loads ata_bd, which drives the ATA controller itself;
-       don't also bring up the ps2atad/APA HDD-install stack or the two would clash.
-       HDD install is then unavailable on an ATA boot (the menu disables it since no
-       APA HDD is detected), but the payload still reads and MC install works. */
-    {
-        unsigned int iopFlags = IOP_MOD_SET_MAIN;
-        if (BootDevice == BOOT_DEVICE_ATA)
-            iopFlags &= ~IOP_MOD_HDD;
-        InitSemaID = IopInitStart(iopFlags);
-    }
+    InitSemaID = IopInitStart(IOP_MOD_SET_MAIN);
 
     sema.init_count = 0;
     sema.max_count = 1;

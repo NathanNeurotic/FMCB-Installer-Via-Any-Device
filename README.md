@@ -12,13 +12,13 @@ A modernized fork of israpps' [FreeMcBoot-Installer](https://github.com/israpps/
    | Internal HDD (APA / PFS) | `hddN:` / `pfsN:` | ✅ supported |
    | MMCE — SD2PSX / MemCard PRO | `mmceN:` | ✅ supported |
    | MX4SIO (SD in MC slot) | `mx4sioN:` | ✅ supported |
-   | ATA / BDM FAT partition | `ataN:` | ✅ supported (read only¹) |
+   | ATA / BDM exFAT + APA (APAJail) | `ataN:` | ✅ supported¹ |
    | Disc | `cdfs:` / `cdromN:` | ✅ supported |
    | PCSX2 host | `host:` | ✅ supported |
 
    This single build replaces the old FAT32/exFAT variant split: it embeds the storage backends and loads only the one matching the launch device at runtime.
 
-   ¹ On an ATA boot the installer uses `ata_bd`, which owns the ATA controller, so the APA/HDD‑install driver (`ps2atad`) is not loaded — you can install to a memory card from an ATA boot, but "install FreeHdBoot to HDD" is disabled in that case. Boot from USB/MC/MMCE to install to the HDD.
+   ¹ On an ATA boot the installer loads `ata_bd`, which provides **both** the ATA (`atad`) interface that `ps2hdd` needs **and** the BDM block device that `bdmfs_fatfs` needs — so `ps2hdd` rides `ata_bd` directly, with no separate `ps2atad`. That lets an exFAT partition and the APA (Sony HDD) format coexist on one drive (**APAJail**): you can boot the installer from the ATA/exFAT partition **and** install FreeHdBoot to the APA side of the same drive — exactly the way wLaunchELF‑R3Z does it.
 
 ## Building
 

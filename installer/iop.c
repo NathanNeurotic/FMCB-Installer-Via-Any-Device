@@ -73,10 +73,26 @@ static void SystemInitThread(struct SystemInitParams *SystemInitParams)
                                    "24\0"
                                    "-o\0"
                                    "8";
+    /* R3Z uses tighter PFS limits when APA shares a drive with exFAT (ATA/APAJail). */
+    static const char PFS_ata_args[] = "-m\0"
+                                       "2\0"
+                                       "-o\0"
+                                       "10\0"
+                                       "-n\0"
+                                       "40";
     int i;
 
     if (SystemInitParams->flags & IOP_MOD_HDD) {
-        if (SifExecModuleBuffer(ATAD_irx, size_ATAD_irx, 0, NULL, NULL) >= 0) {
+        if (GetBootDeviceID() == BOOT_DEVICE_ATA) {
+            /* ATA boot (APAJail): ata_bd (loaded in LoadBootDeviceModules) already
+               provides BOTH the atad interface that ps2hdd imports AND the BDM block
+               device for the exFAT payload, so ps2hdd rides ata_bd -- no ps2atad.
+               This lets the exFAT payload (bdmfs_fatfs) and the APA install (ps2hdd)
+               share one ATA driver on the same drive, exactly as wLaunchELF-R3Z does,
+               so ATA-booted users can still install FreeHdBoot to the APA side. */
+            SifExecModuleBuffer(HDD_irx, size_HDD_irx, 0, NULL, NULL);
+            SifExecModuleBuffer(PFS_irx, size_PFS_irx, sizeof(PFS_ata_args), PFS_ata_args, NULL);
+        } else if (SifExecModuleBuffer(ATAD_irx, size_ATAD_irx, 0, NULL, NULL) >= 0) {
             SifExecModuleBuffer(HDD_irx, size_HDD_irx, 0, NULL, NULL);
             SifExecModuleBuffer(PFS_irx, size_PFS_irx, sizeof(PFS_args), PFS_args, NULL);
         }
