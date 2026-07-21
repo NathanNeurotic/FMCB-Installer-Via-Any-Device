@@ -176,19 +176,30 @@ static void ShowInstallPathDiag(const char *root)
    verbatim. getcwd() keeps the trailing '/', so we just append "INSTALL". */
 void GetInstallRootPath(char *out, int outlen)
 {
-    char cwd[256], cand[300];
-    const char *colon, *subpath;
-    int devlen, tlen;
+    char cwd[256], sub[256], cand[300];
+    const char *colon;
+    int devlen, tlen, sublen;
     char unit;
 
     getcwd(cwd, sizeof(cwd));
 
     if ((colon = strchr(cwd, ':')) == NULL) {
-        snprintf(out, outlen, "%sINSTALL", cwd);
+        // No "device:" prefix -- strip any trailing '/' and append "/INSTALL".
+        snprintf(sub, sizeof(sub), "%s", cwd);
+        for (sublen = strlen(sub); sublen > 0 && sub[sublen - 1] == '/'; )
+            sub[--sublen] = '\0';
+        snprintf(out, outlen, "%s/INSTALL", sub);
         return;
     }
-    subpath = colon + 1;         // keeps the trailing '/', e.g. "/FMCBinst.../"
+
     devlen = (int)(colon - cwd); // device-token length, e.g. 5 for "mass0"
+
+    // Subpath after the colon, with ANY trailing '/' removed. The launcher's cwd
+    // may or may not keep a trailing slash (e.g. "mass0:/1.966" vs "mass0:/1.966/"),
+    // so we strip it and always insert exactly one '/' before "INSTALL".
+    snprintf(sub, sizeof(sub), "%s", colon + 1);
+    for (sublen = strlen(sub); sublen > 0 && sub[sublen - 1] == '/'; )
+        sub[--sublen] = '\0';
 
     // transport = device letters minus trailing digits; unit = last digit (or '0').
     tlen = devlen;
@@ -200,22 +211,26 @@ void GetInstallRootPath(char *out, int outlen)
         (tlen == 3 && !strncmp(cwd, "usb", 3)) ||
         (tlen == 6 && !strncmp(cwd, "mx4sio", 6)) ||
         (tlen == 3 && !strncmp(cwd, "ata", 3))) {
-        snprintf(cand, sizeof(cand), "%sINSTALL", cwd); // exactly as launched
+        // Our driver may name the device differently than the launcher did (bare
+        // vs numbered, generic massN: vs typed usbN:), so probe the likely names
+        // and use the first whose INSTALL/ folder opens.
+        snprintf(cand, sizeof(cand), "%.*s:%s/INSTALL", devlen, cwd, sub); // exactly as launched
         if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
-        snprintf(cand, sizeof(cand), "mass%c:%sINSTALL", unit, subpath); // generic mass<unit>
+        snprintf(cand, sizeof(cand), "mass%c:%s/INSTALL", unit, sub); // generic mass<unit>
         if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
-        snprintf(cand, sizeof(cand), "mass0:%sINSTALL", subpath); // generic mass0
+        snprintf(cand, sizeof(cand), "mass0:%s/INSTALL", sub); // generic mass0
         if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
-        snprintf(cand, sizeof(cand), "%.*s%c:%sINSTALL", tlen, cwd, unit, subpath); // typed <transport><unit>
+        snprintf(cand, sizeof(cand), "%.*s%c:%s/INSTALL", tlen, cwd, unit, sub); // typed <transport><unit>
         if (PathDirOpens(cand)) { snprintf(out, outlen, "%s", cand); return; }
 
         // Nothing opened; fall back to generic mass<unit>: and let the caller
         // surface the read error (a diag build shows what was tried).
-        snprintf(out, outlen, "mass%c:%sINSTALL", unit, subpath);
+        snprintf(out, outlen, "mass%c:%s/INSTALL", unit, sub);
         return;
     }
 
-    snprintf(out, outlen, "%sINSTALL", cwd);
+    // mc:/mmce:/hdd:/pfs:/cdfs:/host: -- stable native names, used verbatim.
+    snprintf(out, outlen, "%.*s:%s/INSTALL", devlen, cwd, sub);
 }
 
 int GetConsoleRegion(void)
