@@ -145,17 +145,20 @@ static int PathDirOpens(const char *path)
 // whether the INSTALL/ folder is actually readable. Enabled only in diag builds.
 static void ShowInstallPathDiag(const char *root)
 {
-    char dbg[512], cwd[256];
-    int fd;
+    char dbg[512], cwd[256], file[300];
+    int fd, st;
+    iox_stat_t stat;
 
     getcwd(cwd, sizeof(cwd));
     fd = fileXioDopen(root);
     if (fd >= 0)
         fileXioDclose(fd);
+    snprintf(file, sizeof(file), "%s/SYS-CONF/FMCB_CFG.ELF", root);
+    st = fileXioGetStat(file, &stat);
 
     snprintf(dbg, sizeof(dbg),
-             "BootDev=%d  Legacy=%d\ncwd=[%s]\nroot=[%s]\nDopen(root)=%d",
-             GetBootDeviceID(), IsLegacyMassBoot(), cwd, root, fd);
+             "BootDev=%d  Legacy=%d\ncwd=[%s]\nroot=[%s]\nDopen(root)=%d  Stat(FMCB_CFG.ELF)=%d",
+             GetBootDeviceID(), IsLegacyMassBoot(), cwd, root, fd, st);
     ShowMessageBox(SYS_UI_LBL_OK, -1, -1, -1, dbg, SYS_UI_LBL_WARNING);
 }
 #endif
