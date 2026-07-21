@@ -77,7 +77,16 @@ int main(int argc, char *argv[])
     }
     sio_printf("Boot device ID = %d\n", BootDevice);
 
-    InitSemaID = IopInitStart(IOP_MOD_SET_MAIN);
+    /* Booting from ATA (BDM) loads ata_bd, which drives the ATA controller itself;
+       don't also bring up the ps2atad/APA HDD-install stack or the two would clash.
+       HDD install is then unavailable on an ATA boot (the menu disables it since no
+       APA HDD is detected), but the payload still reads and MC install works. */
+    {
+        unsigned int iopFlags = IOP_MOD_SET_MAIN;
+        if (BootDevice == BOOT_DEVICE_ATA)
+            iopFlags &= ~IOP_MOD_HDD;
+        InitSemaID = IopInitStart(iopFlags);
+    }
 
     sema.init_count = 0;
     sema.max_count = 1;
@@ -120,21 +129,7 @@ int main(int argc, char *argv[])
         }
     }
 
-#ifndef EXPERIMENTAL_BDM
-    /* MX4SIO / ATA are detected but this build ships no verified BDM backend for
-       them: the only option is SDK mx4sio_bd/ata_bd on the committed BDM core, an
-       unverified cross-generation mix that can hang the IOP (black screen). Rather
-       than risk that, we don't load them; show a clear message instead of failing
-       obscurely. Build with EXPERIMENTAL_BDM=1 to try them on hardware. */
-    if (BootDevice == BOOT_DEVICE_MX4SIO || BootDevice == BOOT_DEVICE_ATA) {
-        ShowMessageBox(SYS_UI_LBL_OK, -1, -1, -1,
-                       "Booting from MX4SIO / ATA is not supported by this build.\n"
-                       "Run the installer from USB, a memory card, the internal HDD,\n"
-                       "MMCE (SD2PSX / MemCard PRO), or a disc.",
-                       SYS_UI_LBL_WARNING);
-    } else
-#endif
-        MainMenu();
+    MainMenu();
 
 ShutdownRPCsAndExit:
     StopWorkerThread();

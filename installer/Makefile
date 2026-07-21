@@ -15,18 +15,13 @@ EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfi
 EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os $(EXTRA_CFLAGS)
 
 # Single "any device" build: embed the storage backends. iop.c loads only the one
-# matching the launch path at runtime (R3Z-style): BDM core (bdm/bdmfs_fatfs) +
-# usbmass_bd for USB, legacy usbhdfsd for bare "mass:", mmceman (EE_IOP_OBJS above)
-# for SD2PSX/MemCard PRO, and cdfs for disc.
-EE_OBJS += bdm_irx.o bdmfs_fatfs_irx.o usbmass_bd_irx.o USBHDFSD_irx.o CDFS_irx.o
-
-# MX4SIO / ATA are OFF by default: the only backends are SDK mx4sio_bd/ata_bd on the
-# committed BDM core (an unverified cross-generation mix that can hang the IOP). Build
-# with `make ... EXPERIMENTAL_BDM=1` to embed + load them for hardware testing.
-ifeq ($(EXPERIMENTAL_BDM),1)
-    EE_CFLAGS += -DEXPERIMENTAL_BDM
-    EE_OBJS += mx4sio_bd_irx.o ata_bd_irx.o
-endif
+# matching the launch path at runtime (R3Z-style): BDM core (bdm/bdmfs_fatfs) + one
+# of usbmass_bd (USB) / mx4sio_bd (MX4SIO SD) / ata_bd (ATA), legacy usbhdfsd for
+# bare "mass:", mmceman (EE_IOP_OBJS above) for SD2PSX/MemCard PRO, and cdfs for disc.
+# The BDM core + usbmass_bd + mx4sio_bd modules are the wLaunchELF-R3Z matched set
+# (bdm/bdmfs_fatfs/usbmass_bd are byte-identical to R3Z's), so MX4SIO works with the
+# same core that boots USB; ata_bd rides that core exactly as R3Z pairs it.
+EE_OBJS += bdm_irx.o bdmfs_fatfs_irx.o usbmass_bd_irx.o mx4sio_bd_irx.o ata_bd_irx.o USBHDFSD_irx.o CDFS_irx.o
 
 ifeq ($(DEBUG),1)
     EE_CFLAGS += -DDEBUG_TTY_FEEDBACK
@@ -115,11 +110,13 @@ bdmfs_fatfs_irx.c: $(IRX_DIR)/bdmfs_fatfs.irx
 usbmass_bd_irx.c: $(IRX_DIR)/usbmass_bd.irx
 	bin2c $< $@ usbmass_bd_irx
 
-# MX4SIO / ATA block backends only exist in the SDK (no committed copy). They ride
-# the same committed BDM core; verify on hardware before relying on them.
-mx4sio_bd_irx.c: $(PS2SDK)/iop/irx/mx4sio_bd.irx
+# mx4sio_bd comes from irx/compiled: it is wLaunchELF-R3Z's precompiled module,
+# matched to our (= R3Z's, byte-identical) bdm/bdmfs_fatfs core -> hardware-proven.
+mx4sio_bd_irx.c: $(IRX_DIR)/mx4sio_bd.irx
 	bin2c $< $@ mx4sio_bd_irx
 
+# ata_bd only exists in the SDK (R3Z pulls it from the SDK too) and rides the same
+# committed BDM core, exactly as R3Z pairs them.
 ata_bd_irx.c: $(PS2SDK)/iop/irx/ata_bd.irx
 	bin2c $< $@ ata_bd_irx
 

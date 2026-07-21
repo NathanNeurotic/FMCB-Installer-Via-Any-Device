@@ -11,11 +11,14 @@ A modernized fork of israpps' [FreeMcBoot-Installer](https://github.com/israpps/
    | Memory card | `mcN:` | ✅ supported |
    | Internal HDD (APA / PFS) | `hddN:` / `pfsN:` | ✅ supported |
    | MMCE — SD2PSX / MemCard PRO | `mmceN:` | ✅ supported |
+   | MX4SIO (SD in MC slot) | `mx4sioN:` | ✅ supported |
+   | ATA / BDM FAT partition | `ataN:` | ✅ supported (read only¹) |
    | Disc | `cdfs:` / `cdromN:` | ✅ supported |
    | PCSX2 host | `host:` | ✅ supported |
-   | MX4SIO / ATA (BDM) | `mx4sioN:` / `ataN:` | ⚠️ opt‑in only — see below |
 
    This single build replaces the old FAT32/exFAT variant split: it embeds the storage backends and loads only the one matching the launch device at runtime.
+
+   ¹ On an ATA boot the installer uses `ata_bd`, which owns the ATA controller, so the APA/HDD‑install driver (`ps2atad`) is not loaded — you can install to a memory card from an ATA boot, but "install FreeHdBoot to HDD" is disabled in that case. Boot from USB/MC/MMCE to install to the HDD.
 
 ## Building
 
@@ -23,17 +26,16 @@ Inside the `ps2dev/ps2dev:latest` toolchain (the base image needs `make`, e.g. `
 
 ```sh
 cd installer
-make rebuild                      # single "any device" build  ->  FMCBInstaller.elf
-make rebuild EXPERIMENTAL_BDM=1   # + MX4SIO/ATA (unverified — see caveat)
+make rebuild                                    # single "any device" build  ->  FMCBInstaller.elf
 make rebuild EXTRA_CFLAGS=-DDIAG_INSTALL_PATH   # debug build: shows the resolved payload path on screen
 ```
 
 The GitHub Actions workflow (`.github/workflows/compile-core.yml`) builds the full per‑version `.7z` release packages.
 
-## Status / caveats
+## Notes
 
-- **USB boot + install is hardware‑tested.** The other devices are implemented but should be verified on hardware.
-- **MX4SIO / ATA are opt‑in and unverified.** The only available block backends are the SDK `mx4sio_bd` / `ata_bd`, which have no counterpart matched to this project's committed BDM core — running them on it is a cross‑generation mix that can hang the IOP (black screen). The default build therefore does **not** load them and shows a "not supported" message if launched from MX4SIO/ATA; build with `EXPERIMENTAL_BDM=1` to try them on hardware.
+- **USB boot + install is hardware‑tested.** The other devices are implemented; verify on hardware.
+- The BDM stack (`bdm` / `bdmfs_fatfs` / `usbmass_bd` / `mx4sio_bd`) uses the **wLaunchELF‑R3Z matched module set** (`installer/irx/compiled/` — R3Z's `bdm`/`bdmfs_fatfs`/`usbmass_bd` are byte‑identical to this project's), so MX4SIO runs on the same BDM core that boots USB. `ata_bd` comes from the SDK, paired with that core exactly as R3Z does.
 
 ---
 

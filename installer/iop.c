@@ -44,10 +44,8 @@ IMPORT_IRX(USBD_irx);
      legacy:    usbhdfsd (bare "mass:" from old usbhdfsd launchers)
      others:    mmceman (SD2PSX/MemCard PRO SD), cdfs (disc) */
 IMPORT_IRX(usbmass_bd_irx);
-#ifdef EXPERIMENTAL_BDM
 IMPORT_IRX(mx4sio_bd_irx);
 IMPORT_IRX(ata_bd_irx);
-#endif
 IMPORT_IRX(bdm_irx);
 IMPORT_IRX(bdmfs_fatfs_irx);
 IMPORT_IRX(USBHDFSD_irx);
@@ -124,24 +122,24 @@ static void LoadBootDeviceModules(void)
                 SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
             }
             break;
-#ifdef EXPERIMENTAL_BDM
-        // Opt-in only (EXPERIMENTAL_BDM=1): SDK mx4sio_bd/ata_bd on the committed
-        // BDM core is an unverified cross-generation mix that may hang the IOP.
         case BOOT_DEVICE_MX4SIO:
-            // MX4SIO SD (SPI SD in the MC slot) -> BDM.
+            // MX4SIO SD (SPI SD in the MC slot) -> BDM core + R3Z's matched
+            // mx4sio_bd (bdm/bdmfs_fatfs are byte-identical to R3Z's).
             SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
             SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
             SifExecModuleBuffer(mx4sio_bd_irx, size_mx4sio_bd_irx, 0, NULL, NULL);
             break;
         case BOOT_DEVICE_ATA:
-            // FAT/exFAT partition on the ATA bus -> BDM. NOTE: ata_bd drives the
-            // ATA controller and may clash with ps2atad (the APA/HDD-install driver
-            // loaded in SystemInitThread); this only affects installs booted from ATA.
+            // FAT/exFAT partition on the ATA bus -> BDM core + ata_bd (dev9 is
+            // already resident from IopInitStart). ata_bd owns the ATA controller,
+            // so we skip the ps2atad/APA HDD-install stack on an ATA boot (see
+            // main.c) to avoid a two-drivers-on-one-controller clash. sleep(1)
+            // mirrors R3Z's settle after ata_bd before it is used.
             SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
             SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
             SifExecModuleBuffer(ata_bd_irx, size_ata_bd_irx, 0, NULL, NULL);
+            sleep(1);
             break;
-#endif
         case BOOT_DEVICE_MMCE:
             // SD2PSX / MemCard PRO SD (mmce0:). Rides SIO2 via freesio2 and coexists
             // with mcman; loaded only for an MMCE boot so it never clashes with

@@ -39,4 +39,6 @@ Changes:
   * disc via CDFS (`cdfs:`)
   * memory card (`mcN:`), internal HDD (`hddN:`/`pfsN:`), and PCSX2 `host:`
   * legacy `usbhdfsd` for a bare `mass:` launch
-  The BDM modules now come from the SDK (per-transport typed-driver names); per-transport aliases are normalized to the always-present `massN:` when locating the `INSTALL/` payload
+- the BDM stack (`bdm`/`bdmfs_fatfs`/`usbmass_bd`/`mx4sio_bd`) uses the wLaunchELF-R3Z matched module set (R3Z's `bdm`/`bdmfs_fatfs`/`usbmass_bd` are byte-identical to this project's committed copies), so MX4SIO runs on the same BDM core that boots USB; `ata_bd` comes from the SDK, paired with that core exactly as R3Z does. (An earlier attempt using the latest SDK BDM modules black-screened on hardware — reverted.)
+- on an ATA boot, `ata_bd` owns the ATA controller so the `ps2atad`/APA HDD-install stack is not loaded (HDD install is disabled for that boot; MC install still works)
+- the `INSTALL/` payload path is now built by inserting exactly one `/` between the launch directory and `INSTALL` and probing candidate device names, so it resolves whether or not the launcher's `argv[0]` keeps a trailing slash and whichever name (bare/numbered, `massN:`/`usbN:`) it uses
