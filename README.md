@@ -1,4 +1,41 @@
-# FreeMcBoot-Installer
+# FMCB-Installer-Modernized
+
+A modernized fork of israpps' [FreeMcBoot-Installer](https://github.com/israpps/FreeMcBoot-Installer), with two goals:
+
+1. **Builds on the latest ps2dev SDK.** The installer now compiles against `ps2dev/ps2dev:latest` (unified toolchain / gcc 15) instead of the old `ps2dev:v1.0`. The SDK-migration details are in the [Changelog](Changelog.md).
+2. **Boots and installs from any device — not just USB.** The original hard-exited unless it was launched from a `mass:` (USB) path, so it wouldn't run from the FreeMcBoot / OSDMenu. It now detects its boot device from `argv[0]` (the way wLaunchELF‑R3Z does) and reads its `INSTALL/` payload from wherever it was launched:
+
+   | Device | Path prefix | Status |
+   |---|---|---|
+   | USB — FAT32 **and** exFAT (BDM) | `mass:` / `massN:` / `usbN:` | ✅ hardware‑tested |
+   | Memory card | `mcN:` | ✅ supported |
+   | Internal HDD (APA / PFS) | `hddN:` / `pfsN:` | ✅ supported |
+   | MMCE — SD2PSX / MemCard PRO | `mmceN:` | ✅ supported |
+   | Disc | `cdfs:` / `cdromN:` | ✅ supported |
+   | PCSX2 host | `host:` | ✅ supported |
+   | MX4SIO / ATA (BDM) | `mx4sioN:` / `ataN:` | ⚠️ opt‑in only — see below |
+
+   This single build replaces the old FAT32/exFAT variant split: it embeds the storage backends and loads only the one matching the launch device at runtime.
+
+## Building
+
+Inside the `ps2dev/ps2dev:latest` toolchain (the base image needs `make`, e.g. `apk add build-base`):
+
+```sh
+cd installer
+make rebuild                      # single "any device" build  ->  FMCBInstaller.elf
+make rebuild EXPERIMENTAL_BDM=1   # + MX4SIO/ATA (unverified — see caveat)
+make rebuild EXTRA_CFLAGS=-DDIAG_INSTALL_PATH   # debug build: shows the resolved payload path on screen
+```
+
+The GitHub Actions workflow (`.github/workflows/compile-core.yml`) builds the full per‑version `.7z` release packages.
+
+## Status / caveats
+
+- **USB boot + install is hardware‑tested.** The other devices are implemented but should be verified on hardware.
+- **MX4SIO / ATA are opt‑in and unverified.** The only available block backends are the SDK `mx4sio_bd` / `ata_bd`, which have no counterpart matched to this project's committed BDM core — running them on it is a cross‑generation mix that can hang the IOP (black screen). The default build therefore does **not** load them and shows a "not supported" message if launched from MX4SIO/ATA; build with `EXPERIMENTAL_BDM=1` to try them on hardware.
+
+---
 
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/3a7e81446817406a94eeb77bcc3762dd)](https://app.codacy.com/gh/israpps/FreeMcBoot-Installer?utm_source=github.com&utm_medium=referral&utm_content=israpps/FreeMcBoot-Installer&utm_campaign=Badge_Grade_Settings)
 [![Build [All]](https://github.com/israpps/FreeMcBoot-Installer/actions/workflows/compile-core.yml/badge.svg)](https://github.com/israpps/FreeMcBoot-Installer/actions/workflows/compile-core.yml)
