@@ -44,8 +44,10 @@ IMPORT_IRX(USBD_irx);
      legacy:    usbhdfsd (bare "mass:" from old usbhdfsd launchers)
      others:    mmceman (SD2PSX/MemCard PRO SD), cdfs (disc) */
 IMPORT_IRX(usbmass_bd_irx);
+#ifdef EXPERIMENTAL_BDM
 IMPORT_IRX(mx4sio_bd_irx);
 IMPORT_IRX(ata_bd_irx);
+#endif
 IMPORT_IRX(bdm_irx);
 IMPORT_IRX(bdmfs_fatfs_irx);
 IMPORT_IRX(USBHDFSD_irx);
@@ -122,6 +124,9 @@ static void LoadBootDeviceModules(void)
                 SifExecModuleBuffer(usbmass_bd_irx, size_usbmass_bd_irx, 0, NULL, NULL);
             }
             break;
+#ifdef EXPERIMENTAL_BDM
+        // Opt-in only (EXPERIMENTAL_BDM=1): SDK mx4sio_bd/ata_bd on the committed
+        // BDM core is an unverified cross-generation mix that may hang the IOP.
         case BOOT_DEVICE_MX4SIO:
             // MX4SIO SD (SPI SD in the MC slot) -> BDM.
             SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
@@ -136,6 +141,7 @@ static void LoadBootDeviceModules(void)
             SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
             SifExecModuleBuffer(ata_bd_irx, size_ata_bd_irx, 0, NULL, NULL);
             break;
+#endif
         case BOOT_DEVICE_MMCE:
             // SD2PSX / MemCard PRO SD (mmce0:). Rides SIO2 via freesio2 and coexists
             // with mcman; loaded only for an MMCE boot so it never clashes with

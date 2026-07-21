@@ -14,11 +14,19 @@ EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfi
 # uses fileXio directly), and uses -G0 instead of the old small-data -mgpopt/-G8192.
 EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os $(EXTRA_CFLAGS)
 
-# Single "any device" build: embed every storage backend. iop.c loads only the
-# one matching the launch path at runtime (R3Z-style): BDM core (bdm/bdmfs_fatfs)
-# + one of usbmass_bd / mx4sio_bd / ata_bd, legacy usbhdfsd for bare "mass:", plus
-# cdfs for disc. (mmceman is in EE_IOP_OBJS above.)
-EE_OBJS += bdm_irx.o bdmfs_fatfs_irx.o usbmass_bd_irx.o mx4sio_bd_irx.o ata_bd_irx.o USBHDFSD_irx.o CDFS_irx.o
+# Single "any device" build: embed the storage backends. iop.c loads only the one
+# matching the launch path at runtime (R3Z-style): BDM core (bdm/bdmfs_fatfs) +
+# usbmass_bd for USB, legacy usbhdfsd for bare "mass:", mmceman (EE_IOP_OBJS above)
+# for SD2PSX/MemCard PRO, and cdfs for disc.
+EE_OBJS += bdm_irx.o bdmfs_fatfs_irx.o usbmass_bd_irx.o USBHDFSD_irx.o CDFS_irx.o
+
+# MX4SIO / ATA are OFF by default: the only backends are SDK mx4sio_bd/ata_bd on the
+# committed BDM core (an unverified cross-generation mix that can hang the IOP). Build
+# with `make ... EXPERIMENTAL_BDM=1` to embed + load them for hardware testing.
+ifeq ($(EXPERIMENTAL_BDM),1)
+    EE_CFLAGS += -DEXPERIMENTAL_BDM
+    EE_OBJS += mx4sio_bd_irx.o ata_bd_irx.o
+endif
 
 ifeq ($(DEBUG),1)
     EE_CFLAGS += -DDEBUG_TTY_FEEDBACK
