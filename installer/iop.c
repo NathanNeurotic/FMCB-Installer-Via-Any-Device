@@ -59,7 +59,11 @@ IMPORT_IRX(IOPRP_img);
 
 u8 dev9Loaded;
 
-#define SYSTEM_INIT_THREAD_STACK_SIZE 0x1000
+/* 8KB (was 4KB): this thread runs SecrInit()/InitMCTOOLS(), which call
+   DEBUG_PRINTF() -> our sio_printf shim (buffer + newlib vsnprintf) and need more
+   stack than ps2sdk's old sio_printf did. Same class of overflow that froze MC
+   dump/restore on the worker thread. */
+#define SYSTEM_INIT_THREAD_STACK_SIZE 0x2000
 
 struct SystemInitParams
 {

@@ -93,7 +93,10 @@ SECTIONS {
 
 	/* Symbols needed by crt0.s.  */
 	PROVIDE(_heap_size = 0x02000000 - _end);
-	PROVIDE(_stack_size = 0x2000);
+	/* 32KB (was 8KB). DEBUG_PRINTF() now goes through our sio_printf shim
+	   (buffer + newlib vsnprintf), which needs far more stack than ps2sdk's old
+	   sio_printf. Modern ps2sdk defaults to 128KB here; 32KB is ample headroom. */
+	PROVIDE(_stack_size = 0x8000);
 
 	_stack = ALIGN(128);
 	PROVIDE(_stack = .);

@@ -2962,8 +2962,13 @@ int StartWorkerThread(void)
     SetWorkerThreadCommand(WORKER_THREAD_CMD_NONE, NULL);
     WorkerThreadResultCode = WORKER_THREAD_RES_OK;
     MainThreadID = GetThreadId();
-    WorkerThreadStack = memalign(128, 0x800);
-    return (WorkerThreadID = SysCreateThread(&WorkerThread, WorkerThreadStack, 0x800, NULL, 0x70));
+    /* 8KB, not the original 2KB: the MC dump/restore routines run on this thread
+       and call DEBUG_PRINTF(), which on the modern SDK goes through our sio_printf
+       shim (buffer + newlib vsnprintf) and needs far more stack than ps2sdk's old
+       sio_printf did. 2KB overflowed and froze dump/restore; the main thread has
+       8KB (see linkfile _stack_size) and handles the same calls fine. */
+    WorkerThreadStack = memalign(128, 0x2000);
+    return (WorkerThreadID = SysCreateThread(&WorkerThread, WorkerThreadStack, 0x2000, NULL, 0x70));
 }
 
 void StopWorkerThread(void)

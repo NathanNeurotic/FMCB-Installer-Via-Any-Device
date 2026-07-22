@@ -11,9 +11,12 @@
 #include <stdio.h>
 #include <stdarg.h>
 
+/* Keep this small: DEBUG_PRINTF() is called from threads with tiny stacks (the
+   MC dump/restore worker thread in particular), and this buffer plus newlib's
+   vsnprintf() have to fit. Debug lines are truncated rather than overflow. */
 static inline int sio_printf(const char *format, ...)
 {
-    char buffer[512];
+    char buffer[256];
     va_list args;
     int result;
 
