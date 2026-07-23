@@ -9,55 +9,115 @@ on:
       - '.github/workflows/compile-core.yml'
   schedule:
     - cron: "0 15 1 * *"
-    
-    
+
 jobs:
+  legacy-hdd-irx:
+    name: Extract ps2dev v1.0 HDD modules
+    runs-on: ubuntu-latest
+    container: ps2dev/ps2dev:v1.0
+    steps:
+      - name: Collect legacy internal-HDD stack
+        run: |
+          set -eux
+          mkdir -p /tmp/legacy-irx
+          cp "$PS2SDK/iop/irx/ps2dev9.irx" /tmp/legacy-irx/
+          cp "$PS2SDK/iop/irx/ps2atad.irx" /tmp/legacy-irx/
+          cp "$PS2SDK/iop/irx/ps2hdd-osd.irx" /tmp/legacy-irx/
+          cp "$PS2SDK/iop/irx/ps2fs.irx" /tmp/legacy-irx/
+          ls -l /tmp/legacy-irx
+          sha256sum /tmp/legacy-irx/*
+
+      - name: Upload legacy modules
+        uses: actions/upload-artifact@v4
+        with:
+          name: ps2dev-v1-hdd-irx
+          path: /tmp/legacy-irx/*.irx
+          retention-days: 7
+
   build-packages:
+    name: Build FHDB test - ${{ matrix.variant }}
+    needs: legacy-hdd-irx
     runs-on: ubuntu-latest
     container: ps2dev/ps2dev:latest
     permissions:
       contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - variant: current
+            make_args: ''
+          - variant: legacy-dev9
+            make_args: 'DEV9_IRX=/tmp/legacy-irx/ps2dev9.irx'
+          - variant: legacy-atad
+            make_args: 'ATAD_IRX=/tmp/legacy-irx/ps2atad.irx'
+          - variant: legacy-apa-pfs
+            make_args: 'HDD_IRX=/tmp/legacy-irx/ps2hdd-osd.irx PFS_IRX=/tmp/legacy-irx/ps2fs.irx'
+          - variant: legacy-dev9-atad
+            make_args: 'DEV9_IRX=/tmp/legacy-irx/ps2dev9.irx ATAD_IRX=/tmp/legacy-irx/ps2atad.irx'
+          - variant: legacy-full-hdd
+            make_args: 'DEV9_IRX=/tmp/legacy-irx/ps2dev9.irx ATAD_IRX=/tmp/legacy-irx/ps2atad.irx HDD_IRX=/tmp/legacy-irx/ps2hdd-osd.irx PFS_IRX=/tmp/legacy-irx/ps2fs.irx'
     steps:
-    - name: Install dependencies
-      run: |
-        apk add build-base git zip p7zip
+      - name: Install dependencies
+        run: |
+          apk add build-base git zip p7zip
 
-    - uses: actions/checkout@v4
-      with:
-        fetch-depth: 0
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
-    - run: |
-        git config --global --add safe.directory "$GITHUB_WORKSPACE"
-        git fetch
+      - name: Download legacy HDD modules
+        uses: actions/download-artifact@v4
+        with:
+          name: ps2dev-v1-hdd-irx
+          path: /tmp/legacy-irx
 
-    - name: Get short SHA
-      id: slug
-      run: echo "SHA8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> $GITHUB_ENV
+      - run: |
+          git config --global --add safe.directory "$GITHUB_WORKSPACE"
+          git fetch
 
-    - name: Compile
-      run: |
-        cd installer
-        make rebuild FMCB_INSTALLER_VERSION=${{ env.SHA8 }} EE_BIN_DIR=../installer_res/
+      - name: Get short SHA
+        run: echo "SHA8=$(echo ${GITHUB_SHA} | cut -c1-8)" >> "$GITHUB_ENV"
 
-    - name: Prepare folder for Release
-      run: |
-        cd installer_res
-        ls
-        chmod +x ./pack.sh
-        ./pack.sh
+      - name: Record module selection
+        run: |
+          echo "variant=${{ matrix.variant }}"
+          echo "make_args=${{ matrix.make_args }}"
+          sha256sum \
+            "${PS2SDK}/iop/irx/ps2dev9.irx" \
+            "${PS2SDK}/iop/irx/ps2atad.irx" \
+            "${PS2SDK}/iop/irx/ps2hdd-osd.irx" \
+            "${PS2SDK}/iop/irx/ps2fs.irx" \
+            /tmp/legacy-irx/*.irx
 
-    - name: Upload artifact
-      if: ${{ success() }}
-      uses: actions/upload-artifact@v4
-      with:
-        name: FMCB-${{ env.SHA8 }}
-        path: |
+      - name: Compile
+        run: |
+          cd installer
+          make rebuild \
+            FMCB_INSTALLER_VERSION="${{ env.SHA8 }}-${{ matrix.variant }}" \
+            EE_BIN_DIR=../installer_res/ \
+            ${{ matrix.make_args }}
+
+      - name: Prepare folder for artifact
+        run: |
+          cd installer_res
+          printf '%s\n' '${{ matrix.variant }}' > FHDB_TEST_VARIANT.txt
+          chmod +x ./pack.sh
+          ./pack.sh
+
+      - name: Upload artifact
+        if: ${{ success() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: FMCB-${{ env.SHA8 }}-${{ matrix.variant }}
+          path: |
             FMCB*.7z
+          retention-days: 14
 
-    - name: Create release
-      if: github.ref == 'refs/heads/master'
-      uses: softprops/action-gh-release@v2
-      with:
-        tag_name: latest
-        name: FreeMcBoot
-        files: FMCB*.7z
+      - name: Create release
+        if: github.ref == 'refs/heads/master' && matrix.variant == 'current'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: latest
+          name: FreeMcBoot
+          files: FMCB*.7z
