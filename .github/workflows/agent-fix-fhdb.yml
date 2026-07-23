@@ -1,3 +1,4 @@
+# One-shot branch workflow. It removes itself after applying and building the source fix.
 name: Apply FHDB source fix
 
 on:
