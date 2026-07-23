@@ -38,7 +38,9 @@ BEGIN {
 
     print
 
-    if (in_mbr_branch && $0 ~ /^[[:space:]]*} else {[[:space:]]*$/) {
+    # Use a plain substring check here. BusyBox awk treats unescaped braces in
+    # extended regular expressions as interval syntax and rejects `} else {`.
+    if (in_mbr_branch && index($0, "} else {") != 0) {
         in_mbr_branch = 0
     }
 }
