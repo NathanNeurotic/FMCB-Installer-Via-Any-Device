@@ -2,10 +2,9 @@
 """Generate the FHDB-hardened system translation unit.
 
 The upstream installer keeps the FHDB implementation in a very large legacy
-system.c.  Keep the hardware-test patch reviewable by replacing only the FHDB
-MBR/PFS I/O section at build time.  The script fails closed if the expected
-source markers move, so an upstream edit cannot silently build an unpatched or
-partially patched installer.
+system.c. Keep the hardware-test patch reviewable by replacing only the FHDB
+MBR/PFS I/O section at build time. The script fails closed if the expected
+source markers move, so source drift cannot silently produce a partial patch.
 """
 
 from __future__ import annotations
@@ -18,20 +17,20 @@ START_MARKER = "/* Don't set this to be too large, as FILEXIO's RPC receive buff
 END_MARKER = "static int CreateBasicFoldersOnHDD"
 
 REPLACEMENT = r'''/* FHDB writes are intentionally kept on fileXio instead of crossing between
-   modern newlib stdio and directly mounted PFS handles.  Every critical write
+   modern newlib stdio and directly mounted PFS handles. Every critical write
    is read back before the installer is allowed to report success. */
 #define MBR_SECTOR_SIZE 512
 #define MBR_VERIFY_OFFSET 0x800
 
-static int ReportFHDBIOError(const char *stage, int result)
+static int FailFHDBIO(const char *stage, int nativeResult, int side)
 {
     char message[192];
 
-    DEBUG_PRINTF("FHDB I/O failure: %s (%d)\n", stage, result);
-    snprintf(message, sizeof(message), "FHDB %s failed.\nError: %d", stage, result);
+    DEBUG_PRINTF("FHDB I/O failure: %s (%d)\n", stage, nativeResult);
+    snprintf(message, sizeof(message), "FHDB %s failed.\nError: %d", stage, nativeResult);
     ShowMessageBox(SYS_UI_LBL_OK, -1, -1, -1, message, SYS_UI_LBL_WARNING);
 
-    return result;
+    return -(EIO | side);
 }
 
 static u32 UpdateFHDBHash(u32 hash, const void *buffer, unsigned int size)
@@ -70,7 +69,7 @@ static int VerifyPFSFile(const char *path, unsigned int expectedSize, u32 expect
     iox_stat_t stat;
     unsigned int remaining, length;
     u32 hash;
-    int fd, result, bytesRead;
+    int fd, result, bytesRead, closeResult;
 
     if ((result = fileXioGetStat(path, &stat)) < 0)
         return result;
@@ -89,13 +88,18 @@ static int VerifyPFSFile(const char *path, unsigned int expectedSize, u32 expect
             result = bytesRead < 0 ? bytesRead : -EIO;
             break;
         }
+        if ((unsigned int)bytesRead > remaining) {
+            result = -EIO;
+            break;
+        }
 
         hash = UpdateFHDBHash(hash, buffer, bytesRead);
         remaining -= bytesRead;
     }
 
-    if (fileXioClose(fd) < 0 && result >= 0)
-        result = -EIO;
+    closeResult = fileXioClose(fd);
+    if (result >= 0 && closeResult < 0)
+        result = closeResult;
     if (result >= 0 && (remaining != 0 || hash != expectedHash))
         result = -EIO;
 
@@ -112,12 +116,12 @@ static int InstallMBRToHDD(FILE *file, void *IOBuffer, unsigned int size)
     int result;
 
     if ((result = fileXioGetStat("hdd0:__mbr", &stat)) < 0)
-        return ReportFHDBIOError("MBR partition lookup", result);
+        return FailFHDBIO("MBR partition lookup", result, ERROR_SIDE_DST);
 
     MBR_Sector = stat.private_5 + 0x2000;
     MBR_NumSectors = (size + MBR_SECTOR_SIZE - 1) / MBR_SECTOR_SIZE;
     if (MBR_NumSectors == 0)
-        return ReportFHDBIOError("MBR size validation", -EINVAL);
+        return FailFHDBIO("MBR size validation", -EINVAL, ERROR_SIDE_SRC);
 
     for (sectorIndex = 0; sectorIndex < MBR_NumSectors; sectorIndex++) {
         bytesThisSector = size - sectorIndex * MBR_SECTOR_SIZE;
@@ -134,25 +138,25 @@ static int InstallMBRToHDD(FILE *file, void *IOBuffer, unsigned int size)
                                    transfer, sizeof(hddAtaTransfer_t),
                                    transfer->data, MBR_SECTOR_SIZE);
             if (result < 0)
-                return ReportFHDBIOError("MBR final-sector read", result);
+                return FailFHDBIO("MBR final-sector read", result, ERROR_SIDE_DST);
         }
 
         if (fread(transfer->data, 1, bytesThisSector, file) != bytesThisSector)
-            return ReportFHDBIOError("MBR source read", -EIO);
+            return FailFHDBIO("MBR source read", -EIO, ERROR_SIDE_SRC);
 
         result = fileXioDevctl("hdd0:", APA_DEVCTL_ATA_WRITE,
                                transfer, sizeof(hddAtaTransfer_t) + MBR_SECTOR_SIZE,
                                NULL, 0);
         if (result < 0)
-            return ReportFHDBIOError("MBR sector write", result);
+            return FailFHDBIO("MBR sector write", result, ERROR_SIDE_DST);
 
         result = fileXioDevctl("hdd0:", APA_DEVCTL_ATA_READ,
                                transfer, sizeof(hddAtaTransfer_t),
                                verifyBuffer, MBR_SECTOR_SIZE);
         if (result < 0)
-            return ReportFHDBIOError("MBR read-back", result);
+            return FailFHDBIO("MBR read-back", result, ERROR_SIDE_DST);
         if (memcmp(transfer->data, verifyBuffer, MBR_SECTOR_SIZE) != 0)
-            return ReportFHDBIOError("MBR verification", -EIO);
+            return FailFHDBIO("MBR verification", -EIO, ERROR_SIDE_DST);
     }
 
     OSDData.start = MBR_Sector;
@@ -160,9 +164,9 @@ static int InstallMBRToHDD(FILE *file, void *IOBuffer, unsigned int size)
     result = fileXioDevctl("hdd0:", APA_DEVCTL_SET_OSDMBR,
                            &OSDData, sizeof(OSDData), NULL, 0);
     if (result < 0)
-        return ReportFHDBIOError("OSD MBR metadata", result);
+        return FailFHDBIO("OSD MBR metadata", result, ERROR_SIDE_DST);
 
-    /* SET_OSDMBR flushes the APA header cache in ps2hdd-osd.  Sync as an
+    /* SET_OSDMBR flushes the APA header cache in ps2hdd-osd. Sync is an
        additional barrier where the driver supports it. */
     fileXioSync("hdd0:", 0);
 
@@ -194,21 +198,23 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
             DEBUG_PRINTF("mkdir: %s\n", FileCopyList[i].target);
             MountPath = GetMountParams(FileCopyList[i].target, BlockDeviceToMount);
             if (MountPath == NULL) {
-                result = ReportFHDBIOError("directory target parsing", -EINVAL);
+                result = FailFHDBIO("directory target parsing", -EINVAL, ERROR_SIDE_DST);
                 break;
             }
 
             if (strcmp(BlockDeviceToMount, CurrentlyMountedBlockDeviceName)) {
                 if (CurrentlyMountedBlockDeviceName[0] != '\0') {
                     fileXioSync("pfs0:", 0);
-                    if ((unmountResult = fileXioUmount("pfs0:")) < 0) {
-                        result = ReportFHDBIOError("PFS unmount", unmountResult);
+                    unmountResult = fileXioUmount("pfs0:");
+                    if (unmountResult < 0) {
+                        result = FailFHDBIO("PFS unmount", unmountResult, ERROR_SIDE_DST);
                         break;
                     }
                 }
 
-                if ((result = fileXioMount("pfs0:", BlockDeviceToMount, FIO_MT_RDWR)) < 0) {
-                    result = ReportFHDBIOError("PFS mount", result);
+                result = fileXioMount("pfs0:", BlockDeviceToMount, FIO_MT_RDWR);
+                if (result < 0) {
+                    result = FailFHDBIO("PFS mount", result, ERROR_SIDE_DST);
                     break;
                 }
                 strcpy(CurrentlyMountedBlockDeviceName, BlockDeviceToMount);
@@ -218,7 +224,7 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
             if (result == -EEXIST)
                 result = 0;
             else if (result < 0)
-                result = ReportFHDBIOError("PFS directory creation", result);
+                result = FailFHDBIO("PFS directory creation", result, ERROR_SIDE_DST);
             continue;
         }
 
@@ -233,34 +239,32 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
         file = fopen(path, "rb");
         free(path);
         if (file == NULL) {
-            result = (-errno) | ERROR_SIDE_SRC;
+            result = FailFHDBIO("source open", -errno, ERROR_SIDE_SRC);
             break;
         }
 
         size = FileCopyList[i].size;
         if (!strcmp(FileCopyList[i].target, "hdd0:__mbr")) {
             result = InstallMBRToHDD(file, buffer, size);
-            if (result < 0)
-                result |= ERROR_SIDE_DST;
-            else
+            if (result >= 0)
                 BytesCopied += size;
         } else {
             MountPath = GetMountParams(FileCopyList[i].target, BlockDeviceToMount);
             if (MountPath == NULL) {
-                result = ReportFHDBIOError("file target parsing", -EINVAL);
+                result = FailFHDBIO("file target parsing", -EINVAL, ERROR_SIDE_DST);
             } else {
                 if (strcmp(BlockDeviceToMount, CurrentlyMountedBlockDeviceName)) {
                     if (CurrentlyMountedBlockDeviceName[0] != '\0') {
                         fileXioSync("pfs0:", 0);
-                        if ((unmountResult = fileXioUmount("pfs0:")) < 0) {
-                            result = ReportFHDBIOError("PFS unmount", unmountResult);
-                        }
+                        unmountResult = fileXioUmount("pfs0:");
+                        if (unmountResult < 0)
+                            result = FailFHDBIO("PFS unmount", unmountResult, ERROR_SIDE_DST);
                     }
 
                     if (result >= 0) {
                         result = fileXioMount("pfs0:", BlockDeviceToMount, FIO_MT_RDWR);
                         if (result < 0)
-                            result = ReportFHDBIOError("PFS mount", result);
+                            result = FailFHDBIO("PFS mount", result, ERROR_SIDE_DST);
                         else
                             strcpy(CurrentlyMountedBlockDeviceName, BlockDeviceToMount);
                     }
@@ -269,7 +273,7 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
                 if (result >= 0) {
                     DestFd = fileXioOpen(MountPath, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC, 0666);
                     if (DestFd < 0) {
-                        result = ReportFHDBIOError("PFS destination open", DestFd);
+                        result = FailFHDBIO("PFS destination open", DestFd, ERROR_SIDE_DST);
                     } else {
                         sourceHash = 2166136261u;
                         for (remaining = size; remaining > 0;) {
@@ -277,13 +281,14 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
                             CopyLength = remaining > IO_BLOCK_SIZE ? IO_BLOCK_SIZE : remaining;
 
                             if (fread(buffer, 1, CopyLength, file) != CopyLength) {
-                                result = ERROR_SIDE_SRC | -EIO;
+                                result = FailFHDBIO("source read", -EIO, ERROR_SIDE_SRC);
                                 break;
                             }
                             sourceHash = UpdateFHDBHash(sourceHash, buffer, CopyLength);
 
-                            if ((result = FileXioWriteAll(DestFd, buffer, CopyLength)) < 0) {
-                                result = ReportFHDBIOError("PFS file write", result);
+                            result = FileXioWriteAll(DestFd, buffer, CopyLength);
+                            if (result < 0) {
+                                result = FailFHDBIO("PFS file write", result, ERROR_SIDE_DST);
                                 break;
                             }
 
@@ -293,13 +298,13 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
 
                         closeResult = fileXioClose(DestFd);
                         if (result >= 0 && closeResult < 0)
-                            result = ReportFHDBIOError("PFS destination close", closeResult);
+                            result = FailFHDBIO("PFS destination close", closeResult, ERROR_SIDE_DST);
 
                         if (result >= 0) {
                             fileXioSync("pfs0:", 0);
                             result = VerifyPFSFile(MountPath, size, sourceHash, buffer);
                             if (result < 0)
-                                result = ReportFHDBIOError("PFS read-back verification", result);
+                                result = FailFHDBIO("PFS read-back verification", result, ERROR_SIDE_DST);
                         }
                     }
                 }
@@ -307,15 +312,13 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
         }
 
         fclose(file);
-        if (result < 0 && !(result & ERROR_SIDE_SRC))
-            result |= ERROR_SIDE_DST;
     }
 
     if (CurrentlyMountedBlockDeviceName[0] != '\0') {
         fileXioSync("pfs0:", 0);
         unmountResult = fileXioUmount("pfs0:");
         if (result >= 0 && unmountResult < 0)
-            result = ReportFHDBIOError("final PFS unmount", unmountResult) | ERROR_SIDE_DST;
+            result = FailFHDBIO("final PFS unmount", unmountResult, ERROR_SIDE_DST);
     }
 
     free(buffer);
