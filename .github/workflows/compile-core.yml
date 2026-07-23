@@ -14,16 +14,17 @@ jobs:
   legacy-hdd-irx:
     name: Extract ps2dev v1.0 HDD modules
     runs-on: ubuntu-latest
-    container: ps2dev/ps2dev:v1.0
     steps:
       - name: Collect legacy internal-HDD stack
         run: |
           set -eux
           mkdir -p /tmp/legacy-irx
-          cp "$PS2SDK/iop/irx/ps2dev9.irx" /tmp/legacy-irx/
-          cp "$PS2SDK/iop/irx/ps2atad.irx" /tmp/legacy-irx/
-          cp "$PS2SDK/iop/irx/ps2hdd-osd.irx" /tmp/legacy-irx/
-          cp "$PS2SDK/iop/irx/ps2fs.irx" /tmp/legacy-irx/
+          container_id=$(docker create ps2dev/ps2dev:v1.0)
+          trap 'docker rm -f "$container_id" >/dev/null 2>&1 || true' EXIT
+          docker cp "$container_id:/usr/local/ps2dev/ps2sdk/iop/irx/ps2dev9.irx" /tmp/legacy-irx/
+          docker cp "$container_id:/usr/local/ps2dev/ps2sdk/iop/irx/ps2atad.irx" /tmp/legacy-irx/
+          docker cp "$container_id:/usr/local/ps2dev/ps2sdk/iop/irx/ps2hdd-osd.irx" /tmp/legacy-irx/
+          docker cp "$container_id:/usr/local/ps2dev/ps2sdk/iop/irx/ps2fs.irx" /tmp/legacy-irx/
           ls -l /tmp/legacy-irx
           sha256sum /tmp/legacy-irx/*
 
