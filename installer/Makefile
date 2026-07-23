@@ -6,7 +6,6 @@ IRX_DIR = irx/compiled
 
 EE_RES_OBJS = background.o buttons.o
 EE_OBJS = main.o iop.o UI.o menu.o libsecr.o pad.o system.o graphics.o ReqSpaceCalc.o font.o $(EE_RES_OBJS) $(EE_IOP_OBJS) mctools_rpc.o
-FHDB_SYSTEM_SRC = system.fhdb-fixed.c
 
 EE_INCS := -I$(PS2SDK)/ports/include -I$(PS2SDK)/ports/include/freetype2 -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I./irx/source/secrsif/src -I./irx/source/mctools/src/
 EE_LDFLAGS := -L$(PS2SDK)/ports/lib -L$(PS2SDK)/ee/lib -L$(PS2DEV)/ee/ee/lib -Tlinkfile -s
@@ -24,6 +23,13 @@ EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os $(EXTRA_CFLA
 # same core that boots USB; ata_bd rides that core exactly as R3Z pairs them.
 EE_OBJS += bdm_irx.o bdmfs_fatfs_irx.o usbmass_bd_irx.o mx4sio_bd_irx.o ata_bd_irx.o USBHDFSD_irx.o CDFS_irx.o
 
+# Allow hardware-diagnostic builds to substitute only the internal-HDD IOP stack
+# while keeping the EE executable, source, payload and all other modules identical.
+DEV9_IRX ?= $(PS2SDK)/iop/irx/ps2dev9.irx
+ATAD_IRX ?= $(PS2SDK)/iop/irx/ps2atad.irx
+HDD_IRX ?= $(PS2SDK)/iop/irx/ps2hdd-osd.irx
+PFS_IRX ?= $(PS2SDK)/iop/irx/ps2fs.irx
+
 ifeq ($(DEBUG),1)
     EE_CFLAGS += -DDEBUG_TTY_FEEDBACK
 endif
@@ -31,15 +37,6 @@ endif
 ifdef FMCB_INSTALLER_VERSION
     EE_CFLAGS += -DFMCB_INSTALLER_VERSION=\"$(FMCB_INSTALLER_VERSION)\"
 endif
-
-# system.c still contains an upstream FHDB-only double fclose that old libc happened
-# to tolerate. Compile a validated generated copy that removes the duplicate close,
-# checks SET_OSDMBR, and flushes the APA write before reporting success.
-system.o: $(FHDB_SYSTEM_SRC)
-	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
-
-$(FHDB_SYSTEM_SRC): system.c tools/prepare-fhdb-system-source.sh
-	sh tools/prepare-fhdb-system-source.sh $< $@
 
 %.o : %.c
 	$(EE_CC) $(EE_CFLAGS) $(EE_INCS) -c $< -o $@
@@ -62,7 +59,7 @@ $(EE_BIN_PACKED): $(EE_BIN)
 	ps2-packer -v $< $@
 
 clean:
-	rm -f $(EE_BIN) $(EE_BIN_REL) $(EE_OBJS) $(FHDB_SYSTEM_SRC) *_irx.c background.c buttons.c IOPRP_img.c
+	rm -f $(EE_BIN) $(EE_BIN_REL) $(EE_OBJS) *_irx.c background.c buttons.c IOPRP_img.c
 
 rebuild: clean $(EE_BIN_PACKED)
 
@@ -75,7 +72,7 @@ buttons.c: resources/buttons.png
 POWEROFF_irx.c: $(PS2SDK)/iop/irx/poweroff.irx
 	bin2c $< $@ POWEROFF_irx
 
-DEV9_irx.c: $(PS2SDK)/iop/irx/ps2dev9.irx
+DEV9_irx.c: $(DEV9_IRX)
 	bin2c $< $@ DEV9_irx
 
 IOMANX_irx.c: $(PS2SDK)/iop/irx/iomanX.irx
@@ -139,13 +136,13 @@ CDFS_irx.c: $(PS2SDK)/iop/irx/cdfs.irx
 IOPRP_img.c: $(IRX_DIR)/IOPRP.img
 	bin2c $< $@ IOPRP_img
 
-ATAD_irx.c: $(PS2SDK)/iop/irx/ps2atad.irx
+ATAD_irx.c: $(ATAD_IRX)
 	bin2c $< $@ ATAD_irx
 
-HDD_irx.c: $(PS2SDK)/iop/irx/ps2hdd-osd.irx
+HDD_irx.c: $(HDD_IRX)
 	bin2c $< $@ HDD_irx
 
-PFS_irx.c: $(PS2SDK)/iop/irx/ps2fs.irx
+PFS_irx.c: $(PFS_IRX)
 	bin2c $< $@ PFS_irx
 
 include $(PS2SDK)/Defs.make
