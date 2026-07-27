@@ -352,7 +352,10 @@ static struct InstallationFile SysResourceFiles[SYS_FOLDER_RESOURCES_NUM_FILES] 
      "BREXEC-SYSTEM/icon.sys",
      0}};
 
-#define BASE_INSTALL_NUM_FILES 6
+/* Any entry whose source file is not present in the INSTALL payload is simply
+   skipped (see FILE_SKIP), so this list can carry both the stock package's files
+   and the newer PS2BBL/OSDMenu ones without either package needing all of them. */
+#define BASE_INSTALL_NUM_FILES 10
 static struct InstallationFile BaseFiles[BASE_INSTALL_NUM_FILES] = {
     {"SYS-CONF/FMCB_CFG.ELF",
      "SYS-CONF/FMCB_CFG.ELF",
@@ -371,6 +374,19 @@ static struct InstallationFile BaseFiles[BASE_INSTALL_NUM_FILES] = {
      0},
     {"SYS-CONF/USBHDFSD.IRX",
      "SYS-CONF/USBHDFSD.IRX",
+     0},
+    // PS2BBL / OSDMenu configuration and icon.
+    {"SYS-CONF/OSDMENU.CNF",
+     "SYS-CONF/OSDMENU.CNF",
+     0},
+    {"SYS-CONF/PS2BBL.INI",
+     "SYS-CONF/PS2BBL.INI",
+     0},
+    {"SYS-CONF/PSXBBL.INI",
+     "SYS-CONF/PSXBBL.INI",
+     0},
+    {"SYS-CONF/icon.icn",
+     "SYS-CONF/icon.icn",
      0}};
 
 #define HDD_BASE_INSTALL_NUM_FILES 22
