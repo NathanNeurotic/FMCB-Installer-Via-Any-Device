@@ -352,57 +352,14 @@ static struct InstallationFile SysResourceFiles[SYS_FOLDER_RESOURCES_NUM_FILES] 
      "BREXEC-SYSTEM/icon.sys",
      0}};
 
-/* Any entry whose source file is not present in the INSTALL payload is simply
-   skipped (see FILE_SKIP), so this list can carry both the stock package's files
-   and the newer PS2BBL/OSDMenu ones without either package needing all of them. */
-#define BASE_INSTALL_NUM_FILES 10
-static struct InstallationFile BaseFiles[BASE_INSTALL_NUM_FILES] = {
-    {"SYS-CONF/FMCB_CFG.ELF",
-     "SYS-CONF/FMCB_CFG.ELF",
-     0},
-    {"SYS-CONF/FREEMCB.CNF",
-     "SYS-CONF/FREEMCB.CNF",
-     0},
-    {"SYS-CONF/ICON.SYS",
-     "SYS-CONF/icon.sys",
-     0},
-    {"SYS-CONF/SYSCONF.ICN",
-     "SYS-CONF/sysconf.icn",
-     0},
-    {"SYS-CONF/USBD.IRX",
-     "SYS-CONF/USBD.IRX",
-     0},
-    {"SYS-CONF/USBHDFSD.IRX",
-     "SYS-CONF/USBHDFSD.IRX",
-     0},
-    // PS2BBL / OSDMenu configuration and icon.
-    {"SYS-CONF/OSDMENU.CNF",
-     "SYS-CONF/OSDMENU.CNF",
-     0},
-    {"SYS-CONF/PS2BBL.INI",
-     "SYS-CONF/PS2BBL.INI",
-     0},
-    {"SYS-CONF/PSXBBL.INI",
-     "SYS-CONF/PSXBBL.INI",
-     0},
-    {"SYS-CONF/icon.icn",
-     "SYS-CONF/icon.icn",
-     0}};
+/* There is deliberately no hardcoded list of SYS-CONF files: the whole contents
+   of INSTALL/SYS-CONF are copied to the memory card's SYS-CONF folder (see
+   PerformInstallation), so the payload decides what ships. */
 
-#define HDD_BASE_INSTALL_NUM_FILES 22
+/* Only SYSTEM/ sources are listed here. The SYS-CONF files that used to be listed
+   individually are now added generically (whole folder -> __sysconf:/FMCB). */
+#define HDD_BASE_INSTALL_NUM_FILES 18
 static struct InstallationFile HDDBaseFiles[HDD_BASE_INSTALL_NUM_FILES] = {
-    {"SYS-CONF/FREEHDB.CNF",
-     "hdd0:__sysconf:pfs:/FMCB/FREEHDB.CNF",
-     0},
-    {"SYS-CONF/FMCB_CFG.ELF",
-     "hdd0:__sysconf:pfs:/FMCB/FMCB_CFG.ELF",
-     0},
-    {"SYS-CONF/USBD.IRX",
-     "hdd0:__sysconf:pfs:/FMCB/USBD.IRX",
-     0},
-    {"SYS-CONF/USBHDFSD.IRX",
-     "hdd0:__sysconf:pfs:/FMCB/USBHDFSD.IRX",
-     0},
     // FSCK
     {
         "SYSTEM/FSCK/FSCK.XLF",
@@ -1422,9 +1379,8 @@ int PerformHDDInstallation(unsigned int flags)
     NumDirectories = 0;
     TotalRequiredSpaceForFiles = 0;
 
-    if (flags & INSTALL_MODE_FLAG_SKIP_CNF) {
-        NumFiles--;
-    }
+    /* No NumFiles-- for SKIP_CNF: FREEHDB.CNF now comes from the generic SYS-CONF
+       folder copy and is flagged FILE_SKIP there instead. */
 
     WaitSema(InstallLockSema);
 
@@ -1457,10 +1413,6 @@ int PerformHDDInstallation(unsigned int flags)
         }
 
         for (i = 0; i < HDD_BASE_INSTALL_NUM_FILES; i++) {
-            if (flags & INSTALL_MODE_FLAG_SKIP_CNF && (strstr(HDDBaseFiles[i].DestRelPath, "FREEHDB.CNF") != NULL)) {
-                continue;
-            }
-
             FileCopyList[file].source = malloc(strlen(HDDBaseFiles[i].SrcRelPath) + 1);
             strcpy(FileCopyList[file].source, HDDBaseFiles[i].SrcRelPath);
 
@@ -1477,6 +1429,22 @@ int PerformHDDInstallation(unsigned int flags)
         /* NOTE: the BOOT-HDD and APPS-HDD folders are deliberately NOT installed
            any more, and no dedicated "PP.FHDB.APPS" partition is created. The APPS
            folder now goes onto the standard __common partition instead. */
+
+        /* Add the whole contents of the SYS-CONF folder, installed into FMCB's
+           configuration folder on the __sysconf partition. No hardcoded list. */
+        if (result >= 0) {
+            unsigned int SysConfStart = NumFiles + NumDirectories;
+
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "SYS-CONF", "hdd0:__sysconf:pfs:/FMCB", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (SYS-CONF -> __sysconf) failed: %d\n", result);
+            } else if (flags & INSTALL_MODE_FLAG_SKIP_CNF) {
+                // Keep the user's existing configuration file, if requested.
+                for (i = SysConfStart; i < NumFiles + NumDirectories; i++) {
+                    if (FileCopyList[i].target != NULL && strstr(FileCopyList[i].target, "FREEHDB.CNF") != NULL)
+                        FileCopyList[i].flags |= FILE_SKIP;
+                }
+            }
+        }
 
         // Add the whole APPS folder to the file list, as __common:/APPS.
         if (result >= 0) {
@@ -1561,7 +1529,9 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
     WaitSema(InstallLockSema);
 
     // Generate the file copy list.
-    NumFiles = BASE_INSTALL_NUM_FILES + SYS_FOLDER_RESOURCES_NUM_FILES;
+    /* SYS-CONF is added generically (whole folder) later, so it contributes no
+       entries here. */
+    NumFiles = SYS_FOLDER_RESOURCES_NUM_FILES;
     switch (TargetSystemType) {
         case PS2_SYSTEM_TYPE_PSX:
             NumFiles += PSX_SYS_INSTALL_NUM_FILES;
@@ -1575,9 +1545,8 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
     NumDirectories = 0;
     TotalRequiredSpaceForFiles = 0;
 
-    if (flags & INSTALL_MODE_FLAG_SKIP_CNF) {
-        NumFiles--;
-    }
+    /* No NumFiles-- for SKIP_CNF: FREEMCB.CNF now comes from the generic SYS-CONF
+       folder copy and is flagged FILE_SKIP there instead. */
 
     if ((flags & INSTALL_MODE_FLAG_MULTI_INST) || (flags & INSTALL_MODE_FLAG_CROSS_REG) || (MGLetter == 'I' && (flags & INSTALL_MODE_FLAG_CROSS_MODEL))) {
         NumFiles += (ROM100J_UPDATE_NUM_FILES + ROM101J_UPDATE_NUM_FILES);
@@ -1817,23 +1786,37 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
             }
         }
 
-        for (i = 0; i < BASE_INSTALL_NUM_FILES; i++) {
-            if (flags & INSTALL_MODE_FLAG_SKIP_CNF && (strstr(BaseFiles[i].DestRelPath, "FREEMCB.CNF") != NULL)) {
-                continue;
-            }
-
-            FileCopyList[file].source = malloc(strlen(BaseFiles[i].SrcRelPath) + 1);
-            strcpy(FileCopyList[file].source, BaseFiles[i].SrcRelPath);
-
-            FileCopyList[file].target = malloc(strlen(BaseFiles[i].DestRelPath) + 1);
-            strcpy(FileCopyList[file].target, BaseFiles[i].DestRelPath);
-
-            FileCopyList[file].flags = BaseFiles[i].flags;
-            file++;
-        }
+        /* NOTE: SYS-CONF is NOT a hardcoded file list -- its whole contents are
+           added generically further below, so the payload can ship whatever
+           configuration files it likes. */
 
         // Start getting the sizes and attributes of the files.
         result = GetAllBaseFileStats(MGLetter, RootFolder, FileCopyList, NumFiles, &TotalRequiredSpaceForFiles);
+
+        /* Add the contents of the SYS-CONF folder, installed to the card's
+           SYS-CONF folder. Two legacy names are written in lower case, because
+           that is what the stock packages' icon.sys refers to. */
+        if (result >= 0) {
+            unsigned int SysConfStart = NumFiles + NumDirectories;
+
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "SYS-CONF", "SYS-CONF", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (SYS-CONF) failed: %d\n", result);
+            } else {
+                for (i = SysConfStart; i < NumFiles + NumDirectories; i++) {
+                    if (FileCopyList[i].target == NULL)
+                        continue;
+
+                    if (strcmp(FileCopyList[i].target, "SYS-CONF/ICON.SYS") == 0)
+                        strcpy(FileCopyList[i].target, "SYS-CONF/icon.sys");
+                    else if (strcmp(FileCopyList[i].target, "SYS-CONF/SYSCONF.ICN") == 0)
+                        strcpy(FileCopyList[i].target, "SYS-CONF/sysconf.icn");
+
+                    // Keep the user's existing configuration file, if requested.
+                    if ((flags & INSTALL_MODE_FLAG_SKIP_CNF) && strstr(FileCopyList[i].target, "FREEMCB.CNF") != NULL)
+                        FileCopyList[i].flags |= FILE_SKIP;
+                }
+            }
+        }
 
         // Add files in the BOOT folder to the file list (memory card BOOT folder).
         if (result >= 0) {
