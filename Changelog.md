@@ -41,6 +41,22 @@ Changes:
   * legacy `usbhdfsd` for a bare `mass:` launch
 - the BDM stack (`bdm`/`bdmfs_fatfs`/`usbmass_bd`/`mx4sio_bd`) uses the wLaunchELF-R3Z matched module set (R3Z's `bdm`/`bdmfs_fatfs`/`usbmass_bd` are byte-identical to this project's committed copies), so MX4SIO runs on the same BDM core that boots USB; `ata_bd` comes from the SDK, paired with that core exactly as R3Z does. (An earlier attempt using the latest SDK BDM modules black-screened on hardware — reverted.)
 - on an ATA boot (APAJail), `ata_bd` provides **both** the `atad` interface that `ps2hdd` needs and the BDM block device that `bdmfs_fatfs` needs, so `ps2hdd` rides `ata_bd` directly (no `ps2atad`). The exFAT payload and the APA partitions coexist on one drive, so you can boot the installer from the ATA/exFAT partition **and** install FreeHdBoot to the APA side of the same drive — the way wLaunchELF-R3Z does
+- **new `INSTALL` payload layout** — the payload is now split by destination, and every folder is optional (a missing one is skipped):
+
+  | Payload folder | Installed to |
+  |---|---|
+  | `INSTALL/MC/…` | the memory card root (so `MC/BOOT/` → `mc:/BOOT/`, `MC/SYS-CONF/` → `mc:/SYS-CONF/`, `MC/APP_X/` → `mc:/APP_X/`) |
+  | `INSTALL/HDD/APPS/…` | `hdd0:__common:/APPS/` |
+  | `INSTALL/HDD/CFG_FHDB/…` | `hdd0:__sysconf:/FMCB/` |
+  | `INSTALL/HDD/CFG_PS2BBL/…` | `hdd0:__sysconf:/PS2BBL/` |
+  | `INSTALL/HDD/HDD_OSD/sysconf/…` | root of `hdd0:__sysconf` |
+  | `INSTALL/HDD/HDD_OSD/system/…` | root of `hdd0:__system` |
+  | `INSTALL/HDD/FSCK/…` | `hdd0:__system:/fsck/` (still a fixed list: `FSCK.XLF` is signed as a KELF and renamed to `fsck.elf`) |
+  | `INSTALL/SYSTEM/…` | the system KELFs/icons (fixed list: each needs a specific destination name and KELF signing) |
+
+  Only `INSTALL/SYSTEM` and `INSTALL/HDD/FSCK` are driven by a built-in file list; everything else is a plain folder copy, so the payload decides what ships.
+- `SYSTEM/FMCB.ICN` is now installed as `icon.icn` (was `FMCB.icn`)
+- creating the folders on the HDD is now best-effort: a partition that can't be mounted is logged and skipped instead of aborting the whole installation
 - reworked what the installer copies, and where:
   * **`INSTALL/APPS`** — on a memory card install its **contents** are copied to the **root of the card** (`INSTALL/APPS/app_dir1` → `mc0:/app_dir1`); no `APPS` folder is created on the card any more. On an HDD install the **whole folder** is installed to the standard **`__common`** partition as `__common:/APPS`
   * **`INSTALL/HDD_OSD/sysconf`** (new, optional) — contents are copied into the root of the **`__sysconf`** partition. Note this is *not* the same as the memory card's `SYS-CONF` folder

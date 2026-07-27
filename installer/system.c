@@ -346,7 +346,7 @@ static struct InstallationFile PSXSysFiles[PSX_SYS_INSTALL_NUM_FILES] = {
 #define SYS_FOLDER_RESOURCES_NUM_FILES 2
 static struct InstallationFile SysResourceFiles[SYS_FOLDER_RESOURCES_NUM_FILES] = {
     {"SYSTEM/FMCB.ICN",
-     "BREXEC-SYSTEM/FMCB.icn",
+     "BREXEC-SYSTEM/icon.icn",
      0},
     {"SYSTEM/ICON.SYS",
      "BREXEC-SYSTEM/icon.sys",
@@ -362,58 +362,58 @@ static struct InstallationFile SysResourceFiles[SYS_FOLDER_RESOURCES_NUM_FILES] 
 static struct InstallationFile HDDBaseFiles[HDD_BASE_INSTALL_NUM_FILES] = {
     // FSCK
     {
-        "SYSTEM/FSCK/FSCK.XLF",
+        "HDD/FSCK/FSCK.XLF",
         "hdd0:__system:pfs:/fsck/fsck.elf",
         FILE_IS_KELF},
-    {"SYSTEM/FSCK/LANG/NotoSans-Bold.ttf",
+    {"HDD/FSCK/LANG/NotoSans-Bold.ttf",
      "hdd0:__system:pfs:/fsck/lang/NotoSans-Bold.ttf",
      0},
-    {"SYSTEM/FSCK/LANG/NotoSansJP-Bold.otf",
+    {"HDD/FSCK/LANG/NotoSansJP-Bold.otf",
      "hdd0:__system:pfs:/fsck/lang/NotoSansJP-Bold.otf",
      0},
-    {"SYSTEM/FSCK/LANG/fonts.txt",
+    {"HDD/FSCK/LANG/fonts.txt",
      "hdd0:__system:pfs:/fsck/lang/fonts.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_JA.txt",
+    {"HDD/FSCK/LANG/strings_JA.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_JA.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_JA.txt",
+    {"HDD/FSCK/LANG/labels_JA.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_JA.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_FR.txt",
+    {"HDD/FSCK/LANG/strings_FR.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_FR.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_FR.txt",
+    {"HDD/FSCK/LANG/labels_FR.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_FR.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_SP.txt",
+    {"HDD/FSCK/LANG/strings_SP.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_SP.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_SP.txt",
+    {"HDD/FSCK/LANG/labels_SP.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_SP.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_GE.txt",
+    {"HDD/FSCK/LANG/strings_GE.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_GE.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_GE.txt",
+    {"HDD/FSCK/LANG/labels_GE.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_GE.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_IT.txt",
+    {"HDD/FSCK/LANG/strings_IT.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_IT.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_IT.txt",
+    {"HDD/FSCK/LANG/labels_IT.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_IT.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_DU.txt",
+    {"HDD/FSCK/LANG/strings_DU.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_DU.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_DU.txt",
+    {"HDD/FSCK/LANG/labels_DU.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_DU.txt",
      0},
-    {"SYSTEM/FSCK/LANG/strings_PO.txt",
+    {"HDD/FSCK/LANG/strings_PO.txt",
      "hdd0:__system:pfs:/fsck/lang/strings_PO.txt",
      0},
-    {"SYSTEM/FSCK/LANG/labels_PO.txt",
+    {"HDD/FSCK/LANG/labels_PO.txt",
      "hdd0:__system:pfs:/fsck/lang/labels_PO.txt",
      0},
 };
@@ -1223,6 +1223,20 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
     return result;
 }
 
+/* Create a folder on the currently mounted pfs0:, treating "already exists" as
+   success. Returns 0 on success, otherwise the error (logged by the caller). */
+static int MakeDirOnMountedPfs(const char *path)
+{
+    int result;
+
+    if ((result = fileXioMkdir(path, 0777)) == -EEXIST)
+        result = 0;
+    if (result < 0)
+        DEBUG_PRINTF("mkdir %s failed: %d\n", path, result);
+
+    return result;
+}
+
 static int CreateBasicFoldersOnHDD(unsigned int flags)
 {
     int result;
@@ -1232,44 +1246,39 @@ static int CreateBasicFoldersOnHDD(unsigned int flags)
             hdd0:__system/fsck
             hdd0:__system/fsck/lang
             hdd0:__sysconf/FMCB
-            hdd0:__common/APPS	*/
+            hdd0:__sysconf/PS2BBL
+            hdd0:__common/APPS
+
+        This is preparation, not the installation itself, so it is best-effort:
+        a partition that cannot be mounted (or a folder that cannot be created)
+        is logged and skipped rather than aborting the whole install. If such a
+        folder is genuinely needed, the file copy reports a precise error for it. */
 
     if ((result = fileXioMount("pfs0:", "hdd0:__system", FIO_MT_RDWR)) >= 0) {
-        if ((result = fileXioMkdir("pfs0:/osd", 0777)) == -EEXIST)
-            result = 0;
-        if (result >= 0) {
-            if ((result = fileXioMkdir("pfs0:/fsck", 0777)) == -EEXIST)
-                result = 0;
-
-            if (result >= 0)
-                if ((result = fileXioMkdir("pfs0:/fsck/lang", 0777)) == -EEXIST)
-                    result = 0;
-        }
+        MakeDirOnMountedPfs("pfs0:/osd");
+        MakeDirOnMountedPfs("pfs0:/fsck");
+        MakeDirOnMountedPfs("pfs0:/fsck/lang");
 
         fileXioUmount("pfs0:");
-    }
+    } else
+        DEBUG_PRINTF("CreateBasicFoldersOnHDD: can't mount __system: %d\n", result);
 
-    if (result >= 0) {
-        if ((result = fileXioMount("pfs0:", "hdd0:__sysconf", FIO_MT_RDWR)) >= 0) {
-            if ((result = fileXioMkdir("pfs0:/FMCB", 0777)) == -EEXIST)
-                result = 0;
+    if ((result = fileXioMount("pfs0:", "hdd0:__sysconf", FIO_MT_RDWR)) >= 0) {
+        MakeDirOnMountedPfs("pfs0:/FMCB");
+        MakeDirOnMountedPfs("pfs0:/PS2BBL");
 
-            fileXioUmount("pfs0:");
-        }
-    }
+        fileXioUmount("pfs0:");
+    } else
+        DEBUG_PRINTF("CreateBasicFoldersOnHDD: can't mount __sysconf: %d\n", result);
 
-    /* The APPS folder is installed to the standard __common partition, so make
-       sure the destination folder exists before the file copy runs. */
-    if (result >= 0) {
-        if ((result = fileXioMount("pfs0:", "hdd0:__common", FIO_MT_RDWR)) >= 0) {
-            if ((result = fileXioMkdir("pfs0:/APPS", 0777)) == -EEXIST)
-                result = 0;
+    if ((result = fileXioMount("pfs0:", "hdd0:__common", FIO_MT_RDWR)) >= 0) {
+        MakeDirOnMountedPfs("pfs0:/APPS");
 
-            fileXioUmount("pfs0:");
-        }
-    }
+        fileXioUmount("pfs0:");
+    } else
+        DEBUG_PRINTF("CreateBasicFoldersOnHDD: can't mount __common: %d\n", result);
 
-    return result;
+    return 0;
 }
 
 static int _CleanupHDDTarget(void)
@@ -1430,42 +1439,51 @@ int PerformHDDInstallation(unsigned int flags)
            any more, and no dedicated "PP.FHDB.APPS" partition is created. The APPS
            folder now goes onto the standard __common partition instead. */
 
-        /* Add the whole contents of the SYS-CONF folder, installed into FMCB's
-           configuration folder on the __sysconf partition. No hardcoded list. */
+        /* Everything the HDD install copies lives under INSTALL/HDD, with one
+           folder per destination. All of them are optional: a folder that is not
+           in the payload is simply skipped.
+               HDD/APPS/...           -> hdd0:__common:/APPS/...
+               HDD/CFG_FHDB/...       -> hdd0:__sysconf:/FMCB/...
+               HDD/CFG_PS2BBL/...     -> hdd0:__sysconf:/PS2BBL/...
+               HDD/HDD_OSD/sysconf/.. -> hdd0:__sysconf:/...   (partition root)
+               HDD/HDD_OSD/system/... -> hdd0:__system:/...    (partition root)
+           (HDD/FSCK is handled by the hardcoded list above, because FSCK.XLF has
+           to be signed as a KELF and renamed to fsck.elf.) */
         if (result >= 0) {
-            unsigned int SysConfStart = NumFiles + NumDirectories;
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/APPS", "hdd0:__common:pfs:/APPS", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD/APPS -> __common) failed: %d\n", result);
+            }
+        }
 
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "SYS-CONF", "hdd0:__sysconf:pfs:/FMCB", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (SYS-CONF -> __sysconf) failed: %d\n", result);
+        if (result >= 0) {
+            unsigned int CfgStart = NumFiles + NumDirectories;
+
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/CFG_FHDB", "hdd0:__sysconf:pfs:/FMCB", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD/CFG_FHDB) failed: %d\n", result);
             } else if (flags & INSTALL_MODE_FLAG_SKIP_CNF) {
                 // Keep the user's existing configuration file, if requested.
-                for (i = SysConfStart; i < NumFiles + NumDirectories; i++) {
+                for (i = CfgStart; i < NumFiles + NumDirectories; i++) {
                     if (FileCopyList[i].target != NULL && strstr(FileCopyList[i].target, "FREEHDB.CNF") != NULL)
                         FileCopyList[i].flags |= FILE_SKIP;
                 }
             }
         }
 
-        // Add the whole APPS folder to the file list, as __common:/APPS.
         if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS", "hdd0:__common:pfs:/APPS", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (APPS -> __common) failed: %d\n", result);
-            }
-        }
-
-        /* Add the HDD-OSD payload: HDD_OSD/sysconf and HDD_OSD/system are copied
-           into the roots of the __sysconf and __system partitions respectively.
-           (HDD_OSD/sysconf is NOT the same thing as the memory card's SYS-CONF.)
-           Both folders are optional -- a missing one is silently skipped. */
-        if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD_OSD/sysconf", "hdd0:__sysconf:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD_OSD/sysconf) failed: %d\n", result);
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/CFG_PS2BBL", "hdd0:__sysconf:pfs:/PS2BBL", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD/CFG_PS2BBL) failed: %d\n", result);
             }
         }
 
         if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD_OSD/system", "hdd0:__system:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD_OSD/system) failed: %d\n", result);
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/HDD_OSD/sysconf", "hdd0:__sysconf:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD/HDD_OSD/sysconf) failed: %d\n", result);
+            }
+        }
+
+        if (result >= 0) {
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/HDD_OSD/system", "hdd0:__system:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD/HDD_OSD/system) failed: %d\n", result);
             }
         }
 
@@ -1793,16 +1811,20 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
         // Start getting the sizes and attributes of the files.
         result = GetAllBaseFileStats(MGLetter, RootFolder, FileCopyList, NumFiles, &TotalRequiredSpaceForFiles);
 
-        /* Add the contents of the SYS-CONF folder, installed to the card's
-           SYS-CONF folder. Two legacy names are written in lower case, because
-           that is what the stock packages' icon.sys refers to. */
+        /* Everything under INSTALL/MC is copied verbatim to the root of the memory
+           card, so the payload alone decides what ends up there:
+               INSTALL/MC/BOOT/...      -> mc0:/BOOT/...
+               INSTALL/MC/SYS-CONF/...  -> mc0:/SYS-CONF/...
+               INSTALL/MC/APP_WLE-R3Z/  -> mc0:/APP_WLE-R3Z/
+           Two legacy upper-case names are written in lower case for older packages,
+           whose icon.sys refers to them that way. */
         if (result >= 0) {
-            unsigned int SysConfStart = NumFiles + NumDirectories;
+            unsigned int McStart = NumFiles + NumDirectories;
 
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "SYS-CONF", "SYS-CONF", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (SYS-CONF) failed: %d\n", result);
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "MC", "", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (MC) failed: %d\n", result);
             } else {
-                for (i = SysConfStart; i < NumFiles + NumDirectories; i++) {
+                for (i = McStart; i < NumFiles + NumDirectories; i++) {
                     if (FileCopyList[i].target == NULL)
                         continue;
 
@@ -1815,22 +1837,6 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
                     if ((flags & INSTALL_MODE_FLAG_SKIP_CNF) && strstr(FileCopyList[i].target, "FREEMCB.CNF") != NULL)
                         FileCopyList[i].flags |= FILE_SKIP;
                 }
-            }
-        }
-
-        // Add files in the BOOT folder to the file list (memory card BOOT folder).
-        if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "BOOT", "BOOT", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (BOOT) failed: %d\n", result);
-            }
-        }
-
-        /* Add the contents of the APPS folder to the file list, installed to the
-           ROOT of the memory card: INSTALL/APPS/app_dir1 -> mc0:/app_dir1 (there is
-           deliberately no "APPS" folder on the card). */
-        if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS", "", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (APPS) failed: %d\n", result);
             }
         }
 
