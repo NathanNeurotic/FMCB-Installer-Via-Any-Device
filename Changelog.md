@@ -41,6 +41,7 @@ Changes:
   * legacy `usbhdfsd` for a bare `mass:` launch
 - the BDM stack (`bdm`/`bdmfs_fatfs`/`usbmass_bd`/`mx4sio_bd`) uses the wLaunchELF-R3Z matched module set (R3Z's `bdm`/`bdmfs_fatfs`/`usbmass_bd` are byte-identical to this project's committed copies), so MX4SIO runs on the same BDM core that boots USB; `ata_bd` comes from the SDK, paired with that core exactly as R3Z does. (An earlier attempt using the latest SDK BDM modules black-screened on hardware — reverted.)
 - on an ATA boot (APAJail), `ata_bd` provides **both** the `atad` interface that `ps2hdd` needs and the BDM block device that `bdmfs_fatfs` needs, so `ps2hdd` rides `ata_bd` directly (no `ps2atad`). The exFAT payload and the APA partitions coexist on one drive, so you can boot the installer from the ATA/exFAT partition **and** install FreeHdBoot to the APA side of the same drive — the way wLaunchELF-R3Z does
+- the release is now a **single curated package** (`FMCB-ISR-RIP.7z`) built from `installer_res/INSTALL`, instead of one package per FreeMcBoot version (1953/1963/1964/1965/1966). The automatic wLaunchELF dependency-update workflow was removed, since the bundled apps are curated by hand now
 - **new `INSTALL` payload layout** — the payload is now split by destination, and every folder is optional (a missing one is skipped):
 
   | Payload folder | Installed to |

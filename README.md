@@ -51,6 +51,7 @@ The GitHub Actions workflow (`.github/workflows/compile-core.yml`) builds the fu
 [![GitHub release (by tag)](https://img.shields.io/github/downloads/israpps/FreeMcBoot-Installer/APPS/total?color=000000&label=Apps%20Pack)](https://github.com/israpps/FreeMcBoot-Installer/releases/tag/APPS)
 
  Custom installers for FreeMcBoot 1.966, 1.965, 1.953, 1.964 and 1.963
+ *(this fork ships a single curated package instead of one per FreeMcBoot version — see the payload layout above)*
 
 They're packed with updated software.
 

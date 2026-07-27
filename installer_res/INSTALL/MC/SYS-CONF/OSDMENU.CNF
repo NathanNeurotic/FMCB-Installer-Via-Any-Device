@@ -1,0 +1,50 @@
+# ---------------------------------------------------------------------------------
+# OSDMenu config file by Berion                               2026-07-25 [PSUja MC]
+# ---------------------------------------------------------------------------------
+# mc?:/SYS-CONF/OSDMENU.CNF
+# ---------------------------------------------------------------------------------
+
+OSDSYS_boot = clock
+OSDSYS_Skip_Disc = 1
+OSDSYS_video_mode = AUTO
+OSDSYS_region = AUTO
+OSDSYS_selected_color = 0x10,0x80,0xE0,0x80
+OSDSYS_unselected_color = 0x33,0x33,0x33,0x80
+OSDSYS_custom_menu = 1
+OSDSYS_scroll_menu = 1
+OSDSYS_menu_x = 432
+OSDSYS_menu_y = 110
+OSDSYS_enter_x = 30
+OSDSYS_enter_y = -1
+OSDSYS_version_x = -1
+OSDSYS_version_y = -1
+OSDSYS_cursor_max_velocity = 1500
+OSDSYS_cursor_acceleration = 150
+OSDSYS_left_cursor = 
+OSDSYS_right_cursor = 
+OSDSYS_menu_top_delimiter = 
+OSDSYS_menu_bottom_delimiter = 
+OSDSYS_num_displayed_items = 5
+cdrom_skip_ps2logo = 1
+cdrom_disable_gameid = 0
+cdrom_use_dkwdrv = 1
+ps1drv_enable_fast = 0
+ps1drv_enable_smooth = 0
+ps1drv_use_ps1vn = 0
+app_gameid = 0
+path_DKWDRV_ELF = mc?:/PS1_DKWDRV/DKWDRV.ELF
+
+# ---------------------------------------------------------------------------------
+name_OSDSYS_ITEM_1 = Launch Disc
+path1_OSDSYS_ITEM_1 = cdrom
+arg_OSDSYS_ITEM_1 = -nologo
+# ---------------------------------------------------------------------------------
+name_OSDSYS_ITEM_2 = File Manager
+path1_OSDSYS_ITEM_2 = mc?:/APP_WLE-R3Z/WLE-R3Z.ELF
+path2_OSDSYS_ITEM_2 = mc?:/BOOT/BOOT2.ELF
+path3_OSDSYS_ITEM_2 = mc?:/BOOT/BOOT.ELF
+# ---------------------------------------------------------------------------------
+name_OSDSYS_ITEM_200 = Shutdown
+path1_OSDSYS_ITEM_200 = POWEROFF
+# ---------------------------------------------------------------------------------
+

@@ -52,7 +52,7 @@ jobs:
       with:
         name: FMCB-${{ env.SHA8 }}
         path: |
-            FMCB*.7z
+            FMCB-ISR-RIP.7z
 
     - name: Create release
       if: github.ref == 'refs/heads/master'
@@ -60,4 +60,4 @@ jobs:
       with:
         tag_name: latest
         name: FreeMcBoot
-        files: FMCB*.7z
+        files: FMCB-ISR-RIP.7z

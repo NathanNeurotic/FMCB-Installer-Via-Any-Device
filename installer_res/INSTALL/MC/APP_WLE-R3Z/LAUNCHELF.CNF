@@ -1,0 +1,95 @@
+CNF_version = 3
+CNF_Path = 
+
+Menu_Title = 
+Menu_Frame = 0
+Menu_Hide_Paths = 0
+Menu_Show_Titles = 1
+Show_Menu = 1
+TV_mode = 0
+Screen_Interlace = 1
+Screen_Offset_X = 0
+Screen_Offset_Y = 0
+Popup_Opaque = 0
+GUI_Swap_Keys = 1
+GUI_Col_1_ABGR = 00101010
+GUI_Col_2_ABGR = 00505050
+GUI_Col_3_ABGR = 006FC3F4
+GUI_Col_4_ABGR = 00D0D0D0
+GUI_Col_5_ABGR = 0099CCFF
+GUI_Col_6_ABGR = 003232A0
+GUI_Col_7_ABGR = 00888888
+GUI_Col_8_ABGR = 006E8D00
+
+NET_HOSTwrite = 0
+Init_Delay = 0
+PathPad_Lock = 0
+FB_NoIcons = 0
+Hide_Hdd = 0
+Hide_MCMMCE = 0
+APP_GameID = 1
+CDROM_Disable_GameID = 0
+Init_CDVD_Check = 0
+Init_reset_IOP = 1
+REBOOT_IOP_ELFLOAD = 1
+
+POPSTARTER_ELF = mc0:/PS1_POPSLOADER/POPSTARTER.ELF
+USBD_FILE = 
+USBMASS_FILE = 
+USBKBD_USED = 1
+USBKBD_FILE = 
+KBDMAP_FILE = 
+LANG_FILE = 
+FONT_FILE = 
+language = english
+VirtualKeyboardLayout = abc
+
+PSU_HugeNames = 0
+PSU_DateNames = 0
+PSU_NoOverwrite = 0
+
+LK_auto_E1 = MISC/FileBrowser
+LK_auto_Timer = 0
+
+LK_Circle_E1 = 
+LK_Cross_E1 = 
+LK_Square_E1 = 
+LK_Triangle_E1 = 
+LK_L1_E1 = 
+LK_R1_E1 = 
+LK_L2_E1 = 
+LK_R2_E1 = 
+LK_L3_E1 = 
+LK_R3_E1 = 
+LK_Start_E1 = 
+LK_Select_E1 = 
+
+LK_Circle_Title = 
+LK_Cross_Title = 
+LK_Square_Title = 
+LK_Triangle_Title = 
+LK_L1_Title = 
+LK_R1_Title = 
+LK_L2_Title = 
+LK_R2_Title = 
+LK_L3_Title = 
+LK_R3_Title = 
+LK_Start_Title = 
+LK_Select_Title = 
+
+Misc = MISC/
+Misc_PS2Disc = PS2Disc
+Misc_FileBrowser = FileBrowser
+Misc_PS2Browser = PS2Browser
+Misc_PS2Net = PS2Net
+Misc_PS2PowerOff = PS2PowerOff
+Misc_HddManager = HddManager
+Misc_TextEditor = TextEditor
+Misc_Configure = Configure
+Misc_Set_CNF_Path = Set CNF_Path
+Misc_ShowFont = ShowFont
+Misc_Debug_Info = Debug Info
+Misc_About_uLE = About uLE
+Misc_Show_Build_Info = BuildInfo
+Misc_OSDSYS = OSDSYS
+Misc_Reboot_IOP = Reboot IOP

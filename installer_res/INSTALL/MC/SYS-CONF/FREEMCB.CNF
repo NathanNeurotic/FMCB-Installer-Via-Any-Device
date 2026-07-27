@@ -1,0 +1,420 @@
+# -----------------------------------------------------------------------------------------------------------------------------------
+# Free McBoot config file by Berion                                                                          2026-07-18 [MC/USB mSAS]
+# -----------------------------------------------------------------------------------------------------------------------------------
+# mass:/FREEMCB.CNF
+# mass:/FREEHDB.CNF
+# mc?:/SYS-CONF/FREEMCB.CNF
+# hdd0:__sysconf:pfs:/FHDB/FREEHDB.CNF
+# hdd0:__sysconf:pfs:/FMCB/FREEMCB.CNF
+# -----------------------------------------------------------------------------------------------------------------------------------
+# hdd0:<partition name>:<fs>:/ internal mass storage device (APA HDD)
+# mass:/                       external mass storage device (USB) (MSC mode; FAT32 or FAT32 on MBR, exFAT on MBR if BDMA used)
+# mc0:/                        Memory Card slot 1
+# mc1:/                        Memory Card slot 2
+# mc?:/                        Memory Card in both slots
+# -----------------------------------------------------------------------------------------------------------------------------------
+
+CNF_version = 1
+Debug_Screen = 0
+FastBoot = 0
+pad_delay = 0
+hacked_OSDSYS = 1
+OSDSYS_video_mode = AUTO
+OSDSYS_Inner_Browser = 0
+OSDSYS_num_displayed_items = 5
+OSDSYS_selected_color = 0x10,0x80,0xE0,0x80
+OSDSYS_unselected_color = 0x33,0x33,0x33,0x80
+OSDSYS_scroll_menu = 1
+OSDSYS_cursor_max_velocity = 1500
+OSDSYS_cursor_acceleration = 150
+OSDSYS_left_cursor = 
+OSDSYS_right_cursor = 
+OSDSYS_menu_top_delimiter = 
+OSDSYS_menu_bottom_delimiter = 
+OSDSYS_menu_x = 432
+OSDSYS_menu_y = 110
+OSDSYS_enter_x = 30
+OSDSYS_enter_y = -1
+OSDSYS_version_x = -1
+OSDSYS_version_y = -1
+OSDSYS_Skip_Logo = 1
+OSDSYS_Skip_Disc = 0
+OSDSYS_Skip_MC = 1
+OSDSYS_Skip_HDD = 1
+
+# -----------------------------------------------------------------------------------------------------------------------------------
+
+ESR_Path_E1 = mass:/ESR.ELF
+ESR_Path_E2 = mc?:/BOOT/ESR.ELF
+ESR_Path_E3 = mc?:/APP_ESR/ESR-R10F-D.ELF
+
+LK_Auto_E1 = mass:/XEBPLUS/XEBPLUS_XMAS.ELF
+LK_Auto_E2 = mass:/OSDXMB/OSDXMB.ELF
+LK_Auto_E3 = 
+
+LK_Cross_E1 = OSDSYS
+LK_Cross_E2 = OSDSYS
+LK_Cross_E3 = OSDSYS
+
+LK_Square_E1 = OSDSYS
+LK_Square_E2 = OSDSYS
+LK_Square_E3 = OSDSYS
+
+LK_Triangle_E1 = OSDSYS
+LK_Triangle_E2 = OSDSYS
+LK_Triangle_E3 = OSDSYS
+
+LK_Circle_E1 = OSDSYS
+LK_Circle_E2 = OSDSYS
+LK_Circle_E3 = OSDSYS
+
+LK_R1_E1 = mc?:/APP_WLE-R3Z/WLE-R3Z.ELF
+LK_R1_E2 = mc?:/BOOT/BOOT2.ELF
+LK_R1_E3 = mc?:/BOOT/BOOT.ELF
+
+LK_R2_E1 = OSDSYS
+LK_R2_E2 = OSDSYS
+LK_R2_E3 = OSDSYS
+
+LK_R3_E1 = OSDSYS
+LK_R3_E2 = OSDSYS
+LK_R3_E3 = OSDSYS
+
+LK_L1_E1 = mc?:/APP_WOPL/WOPL.ELF
+LK_L1_E2 = OSDSYS
+LK_L1_E3 = OSDSYS
+
+LK_L2_E1 = mc?:/APP_RIPTOPL/RIPTOPL.ELF
+LK_L2_E2 = OSDSYS
+LK_L2_E3 = OSDSYS
+
+LK_L3_E1 = OSDSYS
+LK_L3_E2 = OSDSYS
+LK_L3_E3 = OSDSYS
+
+LK_Up_E1 = OSDSYS
+LK_Up_E2 = OSDSYS
+LK_Up_E3 = OSDSYS
+
+LK_Down_E1 = OSDSYS
+LK_Down_E2 = OSDSYS
+LK_Down_E3 = OSDSYS
+
+LK_Left_E1 = OSDSYS
+LK_Left_E2 = OSDSYS
+LK_Left_E3 = OSDSYS
+
+LK_Right_E1 = OSDSYS
+LK_Right_E2 = OSDSYS
+LK_Right_E3 = OSDSYS
+
+LK_Select_E1 = OSDSYS
+LK_Select_E2 = OSDSYS
+LK_Select_E3 = OSDSYS
+
+LK_Start_E1 = OSDSYS
+LK_Start_E2 = OSDSYS
+LK_Start_E3 = OSDSYS
+
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_1 = Launch Disc
+path1_OSDSYS_ITEM_1 = FASTBOOT
+# ------------------------------------------------------------------------------------------------------- Everybody Seeks Redemption:
+name_OSDSYS_ITEM_2 = ESR Launcher
+path1_OSDSYS_ITEM_2 = mc?:/APP_ESR-LAUNCHER/ESR-LAUNCHER.ELF
+path2_OSDSYS_ITEM_2 = mass:/APPS/APP_ESR-LAUNCHER/ESR-LAUNCHER.ELF
+path3_OSDSYS_ITEM_2 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_3 = Open PS2 Loader
+path1_OSDSYS_ITEM_3 = mass:/OPNPS2LD.ELF
+path2_OSDSYS_ITEM_3 = mass:/APPS/APP_OPL/OPL.ELF
+path3_OSDSYS_ITEM_3 = mc?:/APP_OPL/OPL.ELF
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_4 = Open PS2 Loader GD
+path1_OSDSYS_ITEM_4 = mc?:/APP_OPL-GD/OPL-GD.ELF
+path2_OSDSYS_ITEM_4 = mass:/APPS/APP_OPL-GD/OPL-GD.ELF
+path3_OSDSYS_ITEM_4 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_5 = Open PS2 Loader GD (PADEMU)
+path1_OSDSYS_ITEM_5 = mc?:/APP_OPL-GD-PADEMU/OPL-GD-PADEMU.ELF
+path2_OSDSYS_ITEM_5 = mass:/APPS/APP_OPL-GD-PADEMU/OPL-GD-PADEMU.ELF
+path3_OSDSYS_ITEM_5 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_6 = Open PS2 Loader GD (UDMA+)
+path1_OSDSYS_ITEM_6 = mc?:/APP_OPL-GD-UDMA/OPL-GD-UDMA.ELF
+path2_OSDSYS_ITEM_6 = mass:/APPS/APP_OPL-GD-UDMA/OPL-GD-UDMA.ELF
+path3_OSDSYS_ITEM_6 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_7 = Open PS2 Loader RG
+path1_OSDSYS_ITEM_7 = mc?:/APP_OPL-RG/OPL-RG.ELF
+path2_OSDSYS_ITEM_7 = mass:/APPS/APP_OPL-RG/OPL-RG.ELF
+path3_OSDSYS_ITEM_7 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_8 = Open PS2 Loader MMCE
+path1_OSDSYS_ITEM_8 = mc?:/APP_OPL-MMCE/OPL-MMCE.ELF
+path2_OSDSYS_ITEM_8 = mass:/APPS/APP_OPL-MMCE/OPL-MMCE.ELF
+path3_OSDSYS_ITEM_8 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_9 = Open PS2 Loader V1-M
+path1_OSDSYS_ITEM_9 = mc?:/APP_OPL-V1M/OPL-V1M.ELF
+path2_OSDSYS_ITEM_9 = mass:/APPS/APP_OPL-V1M/OPL-V1M.ELF
+path3_OSDSYS_ITEM_9 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_10 = RiptOPL
+path1_OSDSYS_ITEM_10 = mc?:/APP_RIPTOPL/RIPTOPL.ELF
+path2_OSDSYS_ITEM_10 = mass:/APPS/APP_RIPTOPL/RIPTOPL.ELF
+path3_OSDSYS_ITEM_10 = 
+# ------------------------------------------------------------------------------------------------------- Unofficial Open PS2 Loader:
+name_OSDSYS_ITEM_11 = uOPL
+path1_OSDSYS_ITEM_11 = mc?:/APP_UOPL/UOPL.ELF
+path2_OSDSYS_ITEM_11 = mass:/APPS/APP_UOPL/UOPL.ELF
+path3_OSDSYS_ITEM_11 = 
+# ------------------------------------------------------------------------------------------------ Double Unofficial Open PS2 Loader:
+name_OSDSYS_ITEM_12 = wOPL
+path1_OSDSYS_ITEM_12 = mc?:/APP_WOPL/WOPL.ELF
+path2_OSDSYS_ITEM_12 = mass:/APPS/APP_WOPL/WOPL.ELF
+path3_OSDSYS_ITEM_12 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_13 = PS2 Launcher
+path1_OSDSYS_ITEM_13 = mc?:/APP_PS2LAUNCHER/APP_PS2LAUNCHER.ELF
+path2_OSDSYS_ITEM_13 = mass:/APPS/APP_PS2LAUNCHER/APP_PS2LAUNCHER.ELF
+path3_OSDSYS_ITEM_13 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_17 = NHDDL
+path1_OSDSYS_ITEM_17 = mc?:/APP_NHDDL/NHDDL.ELF
+path2_OSDSYS_ITEM_17 = mc?:/NEUTRINO/nhddl.elf
+path3_OSDSYS_ITEM_17 = mass:/APPS/APP_NHDDL/NHDDL.ELF
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_18 = Modulo
+path1_OSDSYS_ITEM_18 = mc?:/APP_MODULO/APP_MODULO.ELF
+path2_OSDSYS_ITEM_18 = mass:/APPS/APP_MODULO/APP_MODULO.ELF
+path3_OSDSYS_ITEM_18 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_19 = GS Mode Selector
+path1_OSDSYS_ITEM_19 = mc?:/APP_GSM/GSM.ELF
+path2_OSDSYS_ITEM_19 = mass:/APPS/APP_GSM/GSM.ELF
+path3_OSDSYS_ITEM_19 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_20 = POPSLoader
+path1_OSDSYS_ITEM_20 = mc?:/PS1_POPSLOADER/POPSLOADER.ELF
+path2_OSDSYS_ITEM_20 = mass:/APPS/PS1_POPSLOADER/POPSLOADER.ELF
+path3_OSDSYS_ITEM_20 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_21 = DKWDRV
+path1_OSDSYS_ITEM_21 = mc?:/PS1_DKWDRV/DKWDRV.ELF
+path2_OSDSYS_ITEM_21 = mass:/APPS/PS1_DKWDRV/DKWDRV.ELF
+path3_OSDSYS_ITEM_21 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_25 = FCEUmm PS2
+path1_OSDSYS_ITEM_25 = mc?:/EMU_FCEUMMPS2/FCEUMMPS2.ELF
+path2_OSDSYS_ITEM_25 = mass:/APPS/EMU_FCEUMMPS2/FCEUMMPS2.ELF
+path3_OSDSYS_ITEM_25 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_26 = SNES-Station
+path1_OSDSYS_ITEM_26 = mc?:/EMU_SNSESTATION/SNESSTATION.ELF
+path2_OSDSYS_ITEM_26 = mass:/APPS/EMU_SNESSTATION/SNESSTATION.ELF
+path3_OSDSYS_ITEM_26 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_27 = SNESticle Revive
+path1_OSDSYS_ITEM_27 = mc?:/EMU_SNESTICLE-REVIVE/SNESTICLE-REVIVE.ELF
+path2_OSDSYS_ITEM_27 = mass:/APPS/EMU_SNESTICLE-REVIVE/SNESTICLE-REVIVE.ELF
+path3_OSDSYS_ITEM_27 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_28 = PS2InfoGB
+path1_OSDSYS_ITEM_28 = mc?:/EMU_PS2INFOGB/PS2INFOGB.ELF
+path2_OSDSYS_ITEM_28 = mass:/APPS/EMU_PS2INFOGB/PS2INFOGB.ELF
+path3_OSDSYS_ITEM_28 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_29 = PS2InfoGB (DS34)
+path1_OSDSYS_ITEM_29 = mc?:/EMU_PS2INFOGB-DS34/PS2INFOGB-DS34.ELF
+path2_OSDSYS_ITEM_29 = mass:/APPS/EMU_PS2INFOGB-DS34/PS2INFOGB-DS34.ELF
+path3_OSDSYS_ITEM_29 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_30 = GPSP-KAI
+path1_OSDSYS_ITEM_30 = mc?:/EMU_GPSPKAI/GPSPKAI.ELF
+path2_OSDSYS_ITEM_30 = mass:/APPS/EMU_GPSPKAI/GPSPKAI.ELF
+path3_OSDSYS_ITEM_30 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_31 = PSMS Reloaded
+path1_OSDSYS_ITEM_31 = mc?:/EMU_PSMS-R/PSMS-R.ELF
+path2_OSDSYS_ITEM_31 = mass:/APPS/EMU_PSMS-R/PSMS-R.ELF
+path3_OSDSYS_ITEM_31 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_32 = PicoDrive
+path1_OSDSYS_ITEM_32 = mc?:/EMU_PICODRIVE/PICODRIVE.ELF
+path2_OSDSYS_ITEM_32 = mass:/APPS/EMU_PICODRIVE/PICODRIVE.ELF
+path3_OSDSYS_ITEM_32 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_33 = NeoPop-PS2
+path1_OSDSYS_ITEM_33 = mc?:/EMU_NEOPOPPS2/NEOPOPPS2.ELF
+path2_OSDSYS_ITEM_33 = mass:/APPS/EMU_NEOPOPPS2/NEOPOPPS2.ELF
+path3_OSDSYS_ITEM_33 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_34 = PS2PCE
+path1_OSDSYS_ITEM_34 = mc?:/EMU_PS2PCE/PS2PCE.ELF
+path2_OSDSYS_ITEM_34 = mass:/APPS/EMU_PS2PCE/PS2PCE.ELF
+path3_OSDSYS_ITEM_34 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_35 = Wonder-Station
+path1_OSDSYS_ITEM_35 = mc?:/EMU_WONDERSTATION/WONDERSTATION.ELF
+path2_OSDSYS_ITEM_35 = mass:/APPS/EMU_WONDERSTATION/WONDERSTATION.ELF
+path3_OSDSYS_ITEM_35 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_36 = PVCS Reloaded
+path1_OSDSYS_ITEM_36 = mc?:/EMU_PVCS-R/PVCS-R.ELF
+path2_OSDSYS_ITEM_36 = mass:/APPS/EMU_PVCS-R/PVCS-R.ELF
+path3_OSDSYS_ITEM_36 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_37 = ScummVM
+path1_OSDSYS_ITEM_37 = mc?:/EMU_SCUMMVM/SCUMMVM.ELF
+path2_OSDSYS_ITEM_37 = mass:/APPS/EMU_SCUMMVM/SCUMMVM.ELF
+path3_OSDSYS_ITEM_37 = mass:/SCUMMVM/SCUMMVM.ELF
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_38 = RETROLauncher
+path1_OSDSYS_ITEM_38 = mass:/RETROLauncher/RETROLauncher.elf
+path2_OSDSYS_ITEM_38 = 
+path3_OSDSYS_ITEM_38 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_39 = RetroArch
+path1_OSDSYS_ITEM_39 = mc?:/EMU_RETROARCH/RETROARCH.ELF
+path2_OSDSYS_ITEM_39 = mass:/APPS/EMU_RETROARCH/RETROARCH.ELF
+path3_OSDSYS_ITEM_39 = 
+# ------------------------------------------------------------------------------------------------------------- unofficial LaunchELF:
+name_OSDSYS_ITEM_40 = uLaunchELF
+path1_OSDSYS_ITEM_40 = mc?:/APP_ULE/ULE.ELF
+path2_OSDSYS_ITEM_40 = mass:/APPS/APP_ULE/ULE.ELF
+path3_OSDSYS_ITEM_40 = 
+# ------------------------------------------------------------------------------------------------------ double-unofficial LaunchELF:
+name_OSDSYS_ITEM_41 = wLaunchELF
+path1_OSDSYS_ITEM_41 = mc?:/APP_WLE/WLE.ELF
+path2_OSDSYS_ITEM_41 = mass:/APPS/APP_WLE/WLE.ELF
+path3_OSDSYS_ITEM_41 = 
+# -------------------------------------------------------------------------------------------------- double-unofficial LaunchELF kHn:
+name_OSDSYS_ITEM_42 = wLaunchELF kHn
+path1_OSDSYS_ITEM_42 = mc?:/APP_WLE-KHN/WLE-KHN.ELF
+path2_OSDSYS_ITEM_42 = mass:/APPS/APP_WLE-KHN/WLE-KHN.ELF
+path3_OSDSYS_ITEM_42 = 
+# ------------------------------------------------------------------------------------------ double-unofficial LaunchELF ISR (exFAT):
+name_OSDSYS_ITEM_43 = wLaunchELF ISR (exFAT)
+path1_OSDSYS_ITEM_43 = mc?:/APP_WLE-ISR-XF/WLE-ISR-XF.ELF
+path2_OSDSYS_ITEM_43 = mass:/APPS/APP_WLE-ISR-XF/WLE-ISR-XF.ELF
+path3_OSDSYS_ITEM_43 = 
+# ----------------------------------------------------------------------------------------- double-unofficial LaunchELF ISR (MX4SIO):
+name_OSDSYS_ITEM_44 = wLaunchELF ISR (MX4SIO)
+path1_OSDSYS_ITEM_44 = mc?:/APP_WLE-ISR-XF-MX/WLE-ISR-XF-MX.ELF
+path2_OSDSYS_ITEM_44 = mass:/APPS/APP_WLE-ISR-XF-MX/WLE-ISR-XF-MX.ELF
+path3_OSDSYS_ITEM_44 = 
+# ------------------------------------------------------------------------------------------- double-unofficial LaunchELF ISR (MMCE):
+name_OSDSYS_ITEM_45 = wLaunchELF ISR (MMCE)
+path1_OSDSYS_ITEM_45 = mc?:/APP_WLE-ISR-XF-MM/WLE-ISR-XF-MM.ELF
+path2_OSDSYS_ITEM_45 = mass:/APPS/APP_WLE-ISR-XF-MM/WLE-ISR-XF-MM.ELF
+path3_OSDSYS_ITEM_45 = 
+# --------------------------------------------------------------------------------- double-unofficial LaunchELF DVR (DESR-xxxx only):
+name_OSDSYS_ITEM_46 = wLaunchELF DVR
+path1_OSDSYS_ITEM_46 = mc?:/APP_WLE-DVR/WLE-DVR.ELF
+path2_OSDSYS_ITEM_46 = mass:/APPS/APP_WLE-DVR/WLE-DVR.ELF
+path3_OSDSYS_ITEM_46 = 
+# --------------------------------------------------------------------------------- double-unofficial LaunchELF XFW (DESR-xxxx only):
+name_OSDSYS_ITEM_47 = wLaunchELF XFW
+path1_OSDSYS_ITEM_47 = mc?:/APP_WLE-XFW/WLE-XFW.ELF
+path2_OSDSYS_ITEM_47 = mass:/APPS/APP_WLE-XFW/WLE-XFW.ELF
+path3_OSDSYS_ITEM_47 = 
+# -------------------------------------------------------------------------------------------------- double-unofficial LaunchELF R3Z:
+name_OSDSYS_ITEM_48 = wLaunchELF R3Z
+path1_OSDSYS_ITEM_48 = mc?:/APP_WLE-R3Z/WLE-R3Z.ELF
+path2_OSDSYS_ITEM_48 = mass:/APPS/APP_WLE-R3Z/WLE-R3Z.ELF
+path3_OSDSYS_ITEM_48 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_59 = RadShell
+path1_OSDSYS_ITEM_59 = mc?:/APP_RADSHELL/RADSHELL.ELF
+path2_OSDSYS_ITEM_59 = mass:/APPS/APP_RADSHELL/RADSHELL.ELF
+path3_OSDSYS_ITEM_59 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_60 = Apollo Save Tool
+path1_OSDSYS_ITEM_60 = mc?:/APP_APOLLO/APOLLO.ELF
+path2_OSDSYS_ITEM_60 = mass:/APPS/APP_APOLLO/APOLLO.ELF
+path3_OSDSYS_ITEM_60 = 
+# ---------------------------------------------------------------------------------------------------- have hardcoded resources path:
+name_OSDSYS_ITEM_61 = Simple Media System
+path1_OSDSYS_ITEM_61 = mc?:/APP_SMS/SMS.ELF
+path2_OSDSYS_ITEM_61 = mass:/APPS/APP_SMS/SMS.ELF
+path3_OSDSYS_ITEM_61 = mc?:/SMS/SMS.ELF
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_62 = Simple Media System
+path1_OSDSYS_ITEM_62 = mc?:/APP_SMS3/SMS3.ELF
+path2_OSDSYS_ITEM_62 = mass:/APPS/APP_SMS3/SMS3.ELF
+path3_OSDSYS_ITEM_62 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_80 = Memory Card Annihilator
+path1_OSDSYS_ITEM_80 = mc?:/DST_MCA/MCA.ELF
+path2_OSDSYS_ITEM_80 = mass:/APPS/DST_MCA/MCA.ELF
+path3_OSDSYS_ITEM_80 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_81 = Original Card Tester
+path1_OSDSYS_ITEM_81 = mc?:/DST_ORIGCARDTEST/ORIGCARDTEST.ELF
+path2_OSDSYS_ITEM_81 = mass:/APPS/DST_ORIGCARDTEST/ORIGCARDTEST.ELF
+path3_OSDSYS_ITEM_81 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_82 = PadTest
+path1_OSDSYS_ITEM_82 = mc?:/DST_PADTEST/PADTEST.ELF
+path2_OSDSYS_ITEM_82 = mass:/APPS/DST_PADTEST/PADTEST.ELF
+path3_OSDSYS_ITEM_82 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_83 = PS2 RDRAM Test
+path1_OSDSYS_ITEM_83 = mc?:/DST_PS2RDRAMTEST/PS2RDRAMTEST.ELF
+path2_OSDSYS_ITEM_83 = mass:/APPS/DST_PS2RDRAMTEST/PS2RDRAMTEST.ELF
+path3_OSDSYS_ITEM_83 = 
+# -------------------------------------------------------------------------------------------------------- SCPH-5xxxx and newer only:
+name_OSDSYS_ITEM_84 = PS2Temps
+path1_OSDSYS_ITEM_84 = mc?:/DST_PS2TEMPS/PS2TEMPS.ELF
+path2_OSDSYS_ITEM_84 = mass:/APPS/DST_PS2TEMPS/PS2TEMPS.ELF
+path3_OSDSYS_ITEM_84 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_85 = HDDChecker
+path1_OSDSYS_ITEM_85 = mc?:/DST_HDDCHECKER/HDDCHECKER.ELF
+path2_OSDSYS_ITEM_85 = mass:/APPS/DST_HDDCHECKER/HDDCHECKER.ELF
+path3_OSDSYS_ITEM_85 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_86 = PS2HDDTester
+path1_OSDSYS_ITEM_86 = mc?:/DST_PS2HDDTESTER/PS2HDDTESTER.ELF
+path2_OSDSYS_ITEM_86 = mass:/APPS/DST_PS2HDDTESTER/PS2HDDTESTER.ELF
+path3_OSDSYS_ITEM_86 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_87 = Lens Changer
+path1_OSDSYS_ITEM_87 = mc?:/DST_LENSCHANGER/LENSCHANGER.ELF
+path2_OSDSYS_ITEM_87 = mass:/APPS/DST_LENSCHANGER/LENSCHANGER.ELF
+path3_OSDSYS_ITEM_87 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_88 = NTPS2
+path1_OSDSYS_ITEM_88 = mc?:/DST_NTPS2/NTPS2.ELF
+path2_OSDSYS_ITEM_88 = mass:/APPS/DST_NTPS2/NTPS2.ELF
+path3_OSDSYS_ITEM_88 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_89 = ROM Version Checker
+path1_OSDSYS_ITEM_89 = mc?:/DST_ROMVERCHK/ROMVERCHK.ELF
+path2_OSDSYS_ITEM_89 = mass:/APPS/DST_ROMVERCHK/ROMVERCHK.ELF
+path3_OSDSYS_ITEM_89 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_90 = PS2Ident
+path1_OSDSYS_ITEM_90 = mc?:/DST_PS2IDENT/PS2IDENT.ELF
+path2_OSDSYS_ITEM_90 = mass:/APPS/DST_PS2IDENT/PS2IDENT.ELF
+path3_OSDSYS_ITEM_90 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_97 = Free McBoot Configurator
+path1_OSDSYS_ITEM_97 = mc?:/DST_FMCBCFG/FMCBCFG.ELF
+path2_OSDSYS_ITEM_97 = mass:/APPS/DST_FMCBCFG/FMCBCFG.ELF 
+path3_OSDSYS_ITEM_97 = mc?:/SYS-CONF/FMCB_CFG.ELF
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_98 = R3Configurator
+path1_OSDSYS_ITEM_98 = mc?:/DST_R3CONFIGURATOR/R3CONFIGURATOR.ELF
+path2_OSDSYS_ITEM_98 = mass:/APPS/DST_R3CONFIGURATOR/R3CONFIGURATOR.ELF 
+path3_OSDSYS_ITEM_98 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
+# name_OSDSYS_ITEM_99 = Restart
+# path1_OSDSYS_ITEM_99 = OSDSYS
+# -----------------------------------------------------------------------------------------------------------------------------------
+name_OSDSYS_ITEM_100 = Shutdown
+path1_OSDSYS_ITEM_100 = POWEROFF
+path2_OSDSYS_ITEM_100 = mc?:/SYS_POWEROFF/POWEROFF.ELF
+path3_OSDSYS_ITEM_100 = 
+# -----------------------------------------------------------------------------------------------------------------------------------
