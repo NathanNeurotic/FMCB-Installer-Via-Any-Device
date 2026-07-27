@@ -106,6 +106,7 @@ struct WorkerThreadMcMaintParams
 };
 
 /* Function prototypes */
+void InstallLog(const char *format, ...);
 int GetBootDeviceID(void);
 int IsLegacyMassBoot(void);
 void GetInstallRootPath(char *out, int outlen);

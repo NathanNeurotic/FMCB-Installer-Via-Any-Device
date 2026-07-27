@@ -135,6 +135,33 @@ int IsLegacyMassBoot(void)
     return (!strncmp(path, "mass:", 5));
 }
 
+/* Append one line to FHDBLOG.TXT next to the installer on the boot device.
+   The file is opened and closed per line on purpose: if the console locks up,
+   whatever was written before the lockup is already on disk, so the last line
+   in the log is the last operation that was attempted. */
+void InstallLog(const char *format, ...)
+{
+    char path[300], cwd[256], line[256];
+    va_list args;
+    int len;
+    FILE *file;
+
+    getcwd(cwd, sizeof(cwd));
+    for (len = strlen(cwd); len > 0 && cwd[len - 1] == '/';)
+        cwd[--len] = '\0';
+    snprintf(path, sizeof(path), "%s/FHDBLOG.TXT", cwd);
+
+    if ((file = fopen(path, "a")) == NULL)
+        return;
+
+    va_start(args, format);
+    vsnprintf(line, sizeof(line), format, args);
+    va_end(args);
+
+    fputs(line, file);
+    fclose(file);
+}
+
 /* Does this directory open? Used to probe candidate payload locations. */
 static int PathDirOpens(const char *path)
 {
@@ -1073,9 +1100,11 @@ static inline int InstallMBRToHDD(FILE *file, void *IOBuffer, unsigned int size)
     int result;
     unsigned int MBR_Sector, remaining, tLengthBytes;
 
+    InstallLog("  MBR: getstat hdd0:__mbr ...\n");
     if ((result = fileXioGetStat("hdd0:__mbr", &stat)) >= 0) {
         MBR_Sector = stat.private_5 + 0x2000;
         MBR_NumSectors = ((size + 0x1FF) & ~0x1FF) / 512;
+        InstallLog("  MBR: ok, start LBA=%u sectors=%u (size=%u)\n", MBR_Sector, MBR_NumSectors, size);
 
         for (i = 0, remaining = size; i < MBR_NumSectors && result >= 0; i += NumSectorsToWrite, remaining -= tLengthBytes) {
             NumSectorsToWrite = ((MBR_NumSectors - i) > MBR_WRITE_BLOCK_SIZE) ? MBR_WRITE_BLOCK_SIZE : MBR_NumSectors - i;
@@ -1085,7 +1114,11 @@ static inline int InstallMBRToHDD(FILE *file, void *IOBuffer, unsigned int size)
             if (fread(((hddAtaTransfer_t *)IOBuffer)->data, 1, tLengthBytes, file) == tLengthBytes) {
                 if (MBR_WRITE_BLOCK_SIZE * 512 - tLengthBytes > 0)
                     memset(((hddAtaTransfer_t *)IOBuffer)->data + tLengthBytes, 0, MBR_WRITE_BLOCK_SIZE * 512 - tLengthBytes);
+                if (i == 0)
+                    InstallLog("  MBR: first ATA write, lba=%u ...\n", MBR_Sector);
                 result = fileXioDevctl("hdd0:", APA_DEVCTL_ATA_WRITE, IOBuffer, MBR_WRITE_BLOCK_SIZE * 512 + sizeof(hddAtaTransfer_t), NULL, 0);
+                if (i == 0)
+                    InstallLog("  MBR: first ATA write returned %d\n", result);
             } else
                 result = -EIO;
         }
@@ -1093,9 +1126,12 @@ static inline int InstallMBRToHDD(FILE *file, void *IOBuffer, unsigned int size)
         if (result >= 0) {
             OSDData.start = MBR_Sector;
             OSDData.size = MBR_NumSectors;
+            InstallLog("  MBR: all writes done, setting OSDMBR ...\n");
             fileXioDevctl("hdd0:", APA_DEVCTL_SET_OSDMBR, &OSDData, sizeof(OSDData), NULL, 0);
+            InstallLog("  MBR: OSDMBR set\n");
         }
-    }
+    } else
+        InstallLog("  MBR: getstat FAILED (%d)\n", result);
 
     return result;
 }
@@ -1115,10 +1151,17 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
         result = 0;
         CurrentlyMountedBlockDeviceName[0] = '\0';
         for (i = 0, BytesCopied = 0; (i < NumFilesEntries) && (result >= 0); i++) {
-            DrawFileCopyProgressScreen((float)((double)BytesCopied / TotalNumBytes));
+            DrawFileCopyProgressScreen(TotalNumBytes > 0 ? (float)((double)BytesCopied / TotalNumBytes) : 0.0f);
 
-            if (FileCopyList[i].flags & FILE_SKIP) // Not present in the payload.
+            if (FileCopyList[i].flags & FILE_SKIP) { // Not present in the payload.
+                InstallLog("[%u/%u] SKIP (not in payload) %s\n", i + 1, NumFilesEntries, FileCopyList[i].source ? FileCopyList[i].source : "?");
                 continue;
+            }
+
+            InstallLog("[%u/%u] %s -> %s (%u bytes)\n", i + 1, NumFilesEntries,
+                       FileCopyList[i].source ? FileCopyList[i].source : "?",
+                       FileCopyList[i].target ? FileCopyList[i].target : "?",
+                       FileCopyList[i].size);
 
             if (FIO_S_ISDIR(FileCopyList[i].mode)) {
                 DEBUG_PRINTF("mkdir: %s\n", FileCopyList[i].target);
@@ -1376,6 +1419,8 @@ int PerformHDDInstallation(unsigned int flags)
     ShowInstallPathDiag(RootFolder);
 #endif
 
+    InstallLog("\n=== FreeHdBoot (HDD) install, payload: %s ===\n", RootFolder);
+
     // Generate the file copy list.
     NumFiles = HDD_BASE_INSTALL_NUM_FILES;
     switch (PS2SystemType) {
@@ -1495,9 +1540,12 @@ int PerformHDDInstallation(unsigned int flags)
 
         // Create basic folders.
         if (result >= 0) {
+            InstallLog("Creating folders on HDD ...\n");
             if ((result = CreateBasicFoldersOnHDD(flags)) < 0) {
                 DEBUG_PRINTF("CreateBasicFoldersOnHDD failed: %d\n", result);
             }
+            InstallLog("Folders created (%d). Starting copy of %u entries, %u bytes.\n",
+                       result, NumFiles + NumDirectories, TotalRequiredSpaceForFiles);
         }
 
         if (result >= 0) {
