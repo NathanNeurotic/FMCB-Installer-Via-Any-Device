@@ -1809,7 +1809,12 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
         // Start getting the sizes and attributes of the files.
         result = GetAllBaseFileStats(MGLetter, RootFolder, FileCopyList, NumFiles, &TotalRequiredSpaceForFiles);
 
-        /* NOTE: the BOOT folder is deliberately NOT installed any more. */
+        // Add files in the BOOT folder to the file list (memory card BOOT folder).
+        if (result >= 0) {
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "BOOT", "BOOT", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (BOOT) failed: %d\n", result);
+            }
+        }
 
         /* Add the contents of the APPS folder to the file list, installed to the
            ROOT of the memory card: INSTALL/APPS/app_dir1 -> mc0:/app_dir1 (there is

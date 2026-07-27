@@ -45,7 +45,7 @@ Changes:
   * **`INSTALL/APPS`** — on a memory card install its **contents** are copied to the **root of the card** (`INSTALL/APPS/app_dir1` → `mc0:/app_dir1`); no `APPS` folder is created on the card any more. On an HDD install the **whole folder** is installed to the standard **`__common`** partition as `__common:/APPS`
   * **`INSTALL/HDD_OSD/sysconf`** (new, optional) — contents are copied into the root of the **`__sysconf`** partition. Note this is *not* the same as the memory card's `SYS-CONF` folder
   * **`INSTALL/HDD_OSD/system`** (new, optional) — contents are copied into the root of the **`__system`** partition
-  * **`INSTALL/BOOT`**, **`INSTALL/BOOT-HDD`** and **`INSTALL/APPS-HDD`** are no longer installed at all
+  * **`INSTALL/BOOT`** is still installed to the card's `BOOT` folder as before (kept so users can still launch an exit/file-browser app); **`INSTALL/BOOT-HDD`** and **`INSTALL/APPS-HDD`** are no longer installed at all
   * the dedicated `PP.FHDB.APPS` HDD partition is no longer created, and the code that built its HDD-OSD attribute area has been removed entirely — so `SYSTEM/AICON.SYS`, `SYSTEM/AICON.ICN` and `SYSTEM/ASYSTEM.CNF` are no longer used or referenced at all (unrelated to the regional `B?ICON.SYS` files, which are still used)
 - new installer background
 - fixed MC dump/restore freezing: modern ps2sdk dropped `sio_printf`, and the shim replacing it (buffer + newlib `vsnprintf`) needs far more stack than the original. The dump/restore worker thread only had 2KB and overflowed. Worker thread 2KB -> 8KB, IOP init thread 4KB -> 8KB, main stack 8KB -> 32KB, and the shim's buffer 512 -> 256 bytes
