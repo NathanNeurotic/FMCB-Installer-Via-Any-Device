@@ -1213,7 +1213,16 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
                     else
                         BytesCopied += size;
 
-                    fclose(file);
+                    /* NOTE: deliberately no fclose() here -- the unconditional
+                       fclose(file) below closes it. Closing it twice used to
+                       freeze the HDD install: on the modern ps2sdk newlib backs
+                       each FILE's lock with a real EE semaphore, so the first
+                       close deletes that semaphore and frees the lock, and the
+                       second close then locks freed memory and does a WaitSema()
+                       on a stale id. When that id happened to name a live,
+                       already-taken semaphore (InstallLockSema is held for the
+                       whole install) the thread blocked forever. The MBR is the
+                       first entry in the copy list, hence "frozen at 0%". */
                 } else {
                     // Check mount command.
                     if ((MountPath = GetMountParams(FileCopyList[i].target, BlockDeviceToMount)) != NULL) {
@@ -1232,7 +1241,7 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
                         if (result >= 0) {
                             if ((DestFile = fopen(MountPath, "wb")) != NULL) {
                                 for (remaining = size; remaining > 0; BytesCopied += CopyLength, remaining -= CopyLength) {
-                                    DrawFileCopyProgressScreen((float)((double)BytesCopied / TotalNumBytes));
+                                    DrawFileCopyProgressScreen(TotalNumBytes > 0 ? (float)((double)BytesCopied / TotalNumBytes) : 0.0f);
                                     CopyLength = remaining > IO_BLOCK_SIZE ? IO_BLOCK_SIZE : remaining;
 
                                     if (fread(buffer, 1, CopyLength, file) == CopyLength) {
