@@ -1249,7 +1249,8 @@ static int CreateBasicFoldersOnHDD(unsigned int flags)
             hdd0:__system/osd
             hdd0:__system/fsck
             hdd0:__system/fsck/lang
-            hdd0:__sysconf/FMCB	*/
+            hdd0:__sysconf/FMCB
+            hdd0:__common/APPS	*/
 
     if ((result = fileXioMount("pfs0:", "hdd0:__system", FIO_MT_RDWR)) >= 0) {
         if ((result = fileXioMkdir("pfs0:/osd", 0777)) == -EEXIST)
@@ -1269,6 +1270,17 @@ static int CreateBasicFoldersOnHDD(unsigned int flags)
     if (result >= 0) {
         if ((result = fileXioMount("pfs0:", "hdd0:__sysconf", FIO_MT_RDWR)) >= 0) {
             if ((result = fileXioMkdir("pfs0:/FMCB", 0777)) == -EEXIST)
+                result = 0;
+
+            fileXioUmount("pfs0:");
+        }
+    }
+
+    /* The APPS folder is installed to the standard __common partition, so make
+       sure the destination folder exists before the file copy runs. */
+    if (result >= 0) {
+        if ((result = fileXioMount("pfs0:", "hdd0:__common", FIO_MT_RDWR)) >= 0) {
+            if ((result = fileXioMkdir("pfs0:/APPS", 0777)) == -EEXIST)
                 result = 0;
 
             fileXioUmount("pfs0:");
@@ -1430,59 +1442,30 @@ int PerformHDDInstallation(unsigned int flags)
         // Start getting the sizes and attributes of the files.
         result = GetAllBaseFileStats(MGFolderRegion, RootFolder, FileCopyList, NumFiles, &TotalRequiredSpaceForFiles);
 
-        // Add files in the BOOT-HDD folder to the file list.
+        /* NOTE: the BOOT-HDD and APPS-HDD folders are deliberately NOT installed
+           any more, and no dedicated "PP.FHDB.APPS" partition is created. The APPS
+           folder now goes onto the standard __common partition instead. */
+
+        // Add the whole APPS folder to the file list, as __common:/APPS.
         if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "BOOT-HDD", "hdd0:__sysconf:pfs:/FMCB", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (BOOT-HDD) failed: %d\n", result);
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS", "hdd0:__common:pfs:/APPS", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (APPS -> __common) failed: %d\n", result);
             }
         }
 
-        // Add files in the APPS-HDD folder to the file list.
+        /* Add the HDD-OSD payload: HDD_OSD/sysconf and HDD_OSD/system are copied
+           into the roots of the __sysconf and __system partitions respectively.
+           (HDD_OSD/sysconf is NOT the same thing as the memory card's SYS-CONF.)
+           Both folders are optional -- a missing one is silently skipped. */
         if (result >= 0) {
-            CurrNumFiles = NumFiles;
-            CurrNumFolders = NumDirectories;
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD_OSD/sysconf", "hdd0:__sysconf:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD_OSD/sysconf) failed: %d\n", result);
+            }
+        }
 
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS-HDD", "hdd0:PP.FHDB.APPS:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (APPS-HDD) failed: %d\n", result);
-            } else {
-                // Check if there is anything to copy (copy, only if the APPS-HDD folder exists).
-                if (CurrNumFiles < NumFiles || CurrNumFolders < NumDirectories) {
-                    // Calculate available and required space for the APPS partition.
-                    if (fileXioMount("pfs0:", "hdd0:PP.FHDB.APPS", FIO_MT_RDONLY) >= 0) {
-                        TotalRequiredSpace = CalculateRequiredSpace(FileCopyList, NumFiles, NumDirectories);
-
-                        AvailableSpace = fileXioDevctl("pfs0:", PDIOC_ZONEFREE, NULL, 0, NULL, 0) * fileXioDevctl("pfs0:", PDIOC_ZONESZ, NULL, 0, NULL, 0);
-                        if (AvailableSpace < TotalRequiredSpace) {
-                            DEBUG_PRINTF("Insuffient space on HDD-APPS: %u required, %u available\n", TotalRequiredSpace, AvailableSpace);
-                            DisplayOutOfSpaceMessageHDD_APPS(AvailableSpace, TotalRequiredSpace);
-                            result = -ENOSPC;
-                        }
-
-                        fileXioUmount("pfs0:");
-                    } else {
-                        // APPS partition may not exist. Determine if one can be created.
-                        if (HDDCheckHasSpace(128) == 0) {
-                            FreeSectors = 0;
-                            fileXioDevctl("hdd0:", HDIOC_FREESECTOR, NULL, 0, &FreeSectors, sizeof(FreeSectors));
-                            AvailableSpace = FreeSectors / 2048; // Sectors in MB = sectors * 512 / 1024 / 1024
-                            TotalRequiredSpace = 128;
-
-                            DEBUG_PRINTF("Insuffient space on HDD: %uMB required, %uMB available\n", TotalRequiredSpace, AvailableSpace);
-                            DisplayOutOfSpaceMessageHDD(AvailableSpace, TotalRequiredSpace);
-                            result = -ENOSPC;
-                        } else {
-                            if ((result = CreateAPPSPartition()) < 0) {
-                                DEBUG_PRINTF("CreateAPPSPartition failed: %d\n", result);
-                            } else {
-                                // Partition created successfully. Write attribute data.
-                                if ((result = WriteAPPSPartitionAttributes()) < 0) {
-                                    DEBUG_PRINTF("WriteAPPSPartitionAttributes failed: %d\n", result);
-                                    DeleteAPPSPartition();
-                                }
-                            }
-                        }
-                    }
-                }
+        if (result >= 0) {
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD_OSD/system", "hdd0:__system:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+                DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD_OSD/system) failed: %d\n", result);
             }
         }
 
@@ -1820,14 +1803,9 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
         // Start getting the sizes and attributes of the files.
         result = GetAllBaseFileStats(MGLetter, RootFolder, FileCopyList, NumFiles, &TotalRequiredSpaceForFiles);
 
-        // Add files in the BOOT folder to the file list.
-        if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "BOOT", "BOOT", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
-                DEBUG_PRINTF("AddDirContentsToFileCopyList (BOOT) failed: %d\n", result);
-            }
-        }
+        /* NOTE: the BOOT folder is deliberately NOT installed any more. */
 
-        // Add files in the APPS folder to the file list.
+        // Add the contents of the APPS folder to the file list (memory card APPS).
         if (result >= 0) {
             if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS", "APPS", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
                 DEBUG_PRINTF("AddDirContentsToFileCopyList (APPS) failed: %d\n", result);
