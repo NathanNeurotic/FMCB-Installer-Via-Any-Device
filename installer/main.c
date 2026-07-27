@@ -28,6 +28,10 @@
 #include "UI.h"
 #include "menu.h"
 
+/* Paint the GS background on fatal paths, so a failure is visible on a TV even
+   when no serial (SIO) console is attached. From upstream israpps commit ac53a47a. */
+#define GS_BGCOLOUR(x) *((volatile unsigned long int *)0x120000E0) = x
+
 int IsHDDUnitConnected = 0;
 
 int VBlankStartSema;
@@ -72,6 +76,7 @@ int main(int argc, char *argv[])
        to "host:" with no payload beside us). */
     if ((BootDevice = GetBootDeviceID()) == BOOT_DEVICE_UNKNOWN)
     {
+        GS_BGCOLOUR(0x0000FF); // blue: could not identify the boot device
         sio_printf("COULD NOT DETERMINE BOOT DEVICE FROM WORKING DIRECTORY (argv[0]). EXITING INSTALLER\n");
         Exit(-1);
     }
@@ -93,6 +98,7 @@ int main(int argc, char *argv[])
     EnableIntc(kINTC_VBLANK_START);
 
     if (InitializeUI(0) != 0) {
+        GS_BGCOLOUR(0xFF00FF); // magenta: UI/graphics init failed
         sio_printf("InitializeUI(0) failed \n");
         SifExitRpc();
         Exit(-1);
