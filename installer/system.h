@@ -134,9 +134,6 @@ float GetWorkerThreadProgress(void);
 
 int IsHDDBootingEnabled(void);
 
-int CreateAPPSPartition(void);
-int WriteAPPSPartitionAttributes(void);
-void DeleteAPPSPartition(void);
 
 int IsUnsupportedModel(void);
 int IsRareModel(void);

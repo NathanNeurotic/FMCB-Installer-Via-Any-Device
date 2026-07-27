@@ -78,7 +78,6 @@ static int GetWorkerThreadCommand(const void **arg);
 static int DumpMemoryCard(int port, int slot, FILE *file, unsigned short int PagesPerCluster, const struct MCTools_McSpecData *McSpecData);
 static int RestoreMemoryCard(int port, int slot, FILE *file, const struct MCTools_McSpecData *McSpecData);
 static void WorkerThread(void *arg);
-static int LoadOSDFile(const char *path, void **pBuffer, int *pSize, int *pRSize);
 
 int GetBootDeviceID(void)
 {
@@ -755,8 +754,9 @@ static int CreateBasicFolders(int port, int slot, unsigned int flags)
 {
     unsigned int i;
     int result;
+    /* No "APPS" folder: the contents of INSTALL/APPS are installed to the root of
+       the memory card (e.g. INSTALL/APPS/app_dir1 -> mc0:/app_dir1). */
     char folders[][16] = {
-        "APPS",
         "BOOT",
         "SYS-CONF",
         "\0"};
@@ -972,7 +972,13 @@ static int AddDirContentsToFileCopyList(const char *RootFolderPath, const char *
                         strcpy(NewFileCopyTarget->source, dirent.name);
                     }
                     if ((NewFileCopyTarget->target = malloc(strlen(destination) + strlen(dirent.name) + 2)) != NULL) {
-                        sprintf(NewFileCopyTarget->target, "%s/%s", destination, dirent.name);
+                        /* An empty destination means "install into the root of the
+                           target device", so don't emit a leading '/' in that case
+                           (memory card paths are relative to the card's root). */
+                        if (destination[0] != '\0')
+                            sprintf(NewFileCopyTarget->target, "%s/%s", destination, dirent.name);
+                        else
+                            strcpy(NewFileCopyTarget->target, dirent.name);
 
                         NewFileCopyTarget->mode = dirent.stat.mode;
                         NewFileCopyTarget->flags = 0;
@@ -1805,9 +1811,11 @@ int PerformInstallation(unsigned char port, unsigned char slot, unsigned int fla
 
         /* NOTE: the BOOT folder is deliberately NOT installed any more. */
 
-        // Add the contents of the APPS folder to the file list (memory card APPS).
+        /* Add the contents of the APPS folder to the file list, installed to the
+           ROOT of the memory card: INSTALL/APPS/app_dir1 -> mc0:/app_dir1 (there is
+           deliberately no "APPS" folder on the card). */
         if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS", "APPS", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "APPS", "", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
                 DEBUG_PRINTF("AddDirContentsToFileCopyList (APPS) failed: %d\n", result);
             }
         }
@@ -2987,158 +2995,6 @@ int GetWorkerThreadState(void)
 float GetWorkerThreadProgress(void)
 {
     return WorkerThreadProgress;
-}
-
-int CreateAPPSPartition(void)
-{
-    u32 ZoneSize;
-    u8 *fill;
-    int result, fd;
-
-    if ((fd = fileXioOpen("hdd0:PP.FHDB.APPS,,,128M,PFS", FIO_O_WRONLY | FIO_O_CREAT, 0644)) >= 0) {
-        if ((fill = memalign(64, 512)) != NULL) {
-            memset(fill, 0, 512);
-            fileXioWrite(fd, fill, 512);
-            fileXioClose(fd);
-            free(fill);
-
-            ZoneSize = 8192;
-            result = fileXioFormat("pfs:", "hdd0:PP.FHDB.APPS", &ZoneSize, sizeof(ZoneSize));
-        } else
-            result = -ENOMEM;
-    } else
-        result = fd;
-
-    return result;
-}
-
-enum OSD_RESOURCE_FILE_TYPES {
-    OSD_SYSTEM_CNF_INDEX = 0,
-    OSD_ICON_SYS_INDEX,
-    OSD_VIEW_ICON_INDEX,
-    OSD_DEL_ICON_INDEX,
-
-    NUM_OSD_FILES_ENTS
-};
-
-typedef struct
-{
-    int offset;
-    int size;
-} OSDResFileEnt_t;
-
-typedef struct PartAttributeAreaTable
-{
-    char magic[9]; /* "PS2ICON3D" */
-    unsigned char reserved[3];
-    int version; /* Must be zero. */
-    OSDResFileEnt_t FileEnt[NUM_OSD_FILES_ENTS];
-    unsigned char reserved2[464];
-} t_PartAttrTab __attribute__((packed));
-
-struct AttribFile
-{
-    void *buffer;
-    int rsize;
-};
-
-static int LoadOSDFile(const char *path, void **pBuffer, int *pSize, int *pRSize)
-{
-    u8 *buffer;
-    FILE *file;
-    int result, size, rsize;
-
-    if ((file = fopen(path, "rb")) != NULL) {
-        fseek(file, 0, SEEK_END);
-        size = ftell(file);
-        rsize = (size + 511) & ~511;
-        rewind(file);
-
-        if ((buffer = memalign(64, rsize)) != NULL) {
-            if (fread(buffer, 1, size, file) == size) {
-                memset(&buffer[size], 0, rsize - size);
-
-                result = 0;
-                *pBuffer = buffer;
-                *pSize = size;
-                *pRSize = rsize;
-            } else {
-                result = -EIO;
-                free(buffer);
-            }
-        } else
-            result = -ENOMEM;
-
-        fclose(file);
-    } else
-        result = -errno;
-
-    return result;
-}
-
-int WriteAPPSPartitionAttributes(void)
-{ // This signifies the end of the installation process.
-    u8 *buffer;
-    t_PartAttrTab *AttributeTable;
-    struct AttribFile files[NUM_OSD_FILES_ENTS];
-    u32 ZoneSize;
-    int result, fd, i;
-
-    if ((fd = fileXioOpen("hdd0:PP.FHDB.APPS", FIO_O_WRONLY, 0644)) >= 0) {
-        result = 0;
-        memset(files, 0, sizeof(files));
-
-        if ((AttributeTable = memalign(64, sizeof(t_PartAttrTab))) != NULL) {
-            memset(AttributeTable, 0, sizeof(AttributeTable));
-            memcpy(AttributeTable->magic, "PS2ICON3D", 9);
-
-            if (LoadOSDFile("INSTALL/SYSTEM/ASYSTEM.CNF", &files[OSD_SYSTEM_CNF_INDEX].buffer, &AttributeTable->FileEnt[OSD_SYSTEM_CNF_INDEX].size, &files[OSD_SYSTEM_CNF_INDEX].rsize) == 0 && LoadOSDFile("INSTALL/SYSTEM/AICON.SYS", &files[OSD_ICON_SYS_INDEX].buffer, &AttributeTable->FileEnt[OSD_ICON_SYS_INDEX].size, &files[OSD_ICON_SYS_INDEX].rsize) == 0 && LoadOSDFile("INSTALL/SYSTEM/AICON.ICN", &files[OSD_VIEW_ICON_INDEX].buffer, &AttributeTable->FileEnt[OSD_VIEW_ICON_INDEX].size, &files[OSD_VIEW_ICON_INDEX].rsize) == 0) {
-
-                AttributeTable->FileEnt[OSD_SYSTEM_CNF_INDEX].offset = sizeof(t_PartAttrTab);
-                AttributeTable->FileEnt[OSD_ICON_SYS_INDEX].offset = AttributeTable->FileEnt[OSD_SYSTEM_CNF_INDEX].offset + files[OSD_SYSTEM_CNF_INDEX].rsize;
-                AttributeTable->FileEnt[OSD_VIEW_ICON_INDEX].offset = AttributeTable->FileEnt[OSD_ICON_SYS_INDEX].offset + files[OSD_ICON_SYS_INDEX].rsize;
-
-                fileXioLseek(fd, sizeof(t_PartAttrTab), SEEK_SET);
-                for (i = 0; i < NUM_OSD_FILES_ENTS; i++) {
-                    if (AttributeTable->FileEnt[i].size == 0)
-                        continue;
-
-                    if (fileXioWrite(fd, files[i].buffer, files[i].rsize) != files[i].rsize) {
-                        result = -EIO;
-                        break;
-                    }
-                }
-
-                if (result == 0) {
-                    // Duplicate the list-view icon's entry for the delete icon
-                    AttributeTable->FileEnt[OSD_DEL_ICON_INDEX].offset = AttributeTable->FileEnt[OSD_VIEW_ICON_INDEX].offset;
-                    AttributeTable->FileEnt[OSD_DEL_ICON_INDEX].size = AttributeTable->FileEnt[OSD_VIEW_ICON_INDEX].size;
-
-                    fileXioLseek(fd, 0, SEEK_SET);
-                    if (fileXioWrite(fd, AttributeTable, sizeof(t_PartAttrTab)) != sizeof(t_PartAttrTab))
-                        result = -EIO;
-                }
-            }
-
-            for (i = 0; i < NUM_OSD_FILES_ENTS; i++) {
-                if (files[i].buffer != NULL)
-                    free(files[i].buffer);
-            }
-
-            free(AttributeTable);
-        } else
-            result = -ENOMEM;
-
-        fileXioClose(fd);
-    } else
-        result = fd;
-
-    return result;
-}
-
-void DeleteAPPSPartition(void)
-{
-    fileXioRemove("hdd0:PP.FHDB.APPS");
 }
 
 int IsUnsupportedModel(void)
