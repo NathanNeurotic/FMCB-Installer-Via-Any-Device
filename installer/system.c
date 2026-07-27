@@ -22,6 +22,13 @@
 #include <errno.h>
 #include <unistd.h>
 #include <stdlib.h>
+/* IMPORTANT: IOP-side calls (fileXio and mc functions) take the IOP flag values
+   named FIO_O_xxx and FIO_MT_xxx from <io_common.h> -- NOT the POSIX O_xxx values
+   from <sys/fcntl.h>. Old ps2sdk shipped its own <sys/fcntl.h> that merely did
+   "#include <io_common.h>", so a plain O_WRONLY was 0x0002 (the IOP value). Modern
+   ps2sdk renamed these to FIO_O_xxx and dropped that header, so O_WRONLY now
+   resolves to newlib's POSIX 1 (which equals FIO_O_RDONLY) and an IOP file would
+   silently open READ-ONLY. Always use the FIO_O_xxx names for these calls. */
 #include <io_common.h>
 
 #include <libgs.h>
@@ -2006,7 +2013,7 @@ static int CopyFiles(const char *RootFolder, unsigned char port, unsigned char s
                     /* Point the buffer pointer to the buffer containing the next file. */
                     buffer = NextFileBuf;
 
-                    mcOpen(port, slot, FileCopyList[i].target, O_WRONLY | O_CREAT | O_TRUNC);
+                    mcOpen(port, slot, FileCopyList[i].target, FIO_O_WRONLY | FIO_O_CREAT | FIO_O_TRUNC);
                     mcSync(0, NULL, &McFileFD);
 
                     if (McFileFD < 0) {
@@ -3010,7 +3017,7 @@ int CreateAPPSPartition(void)
     u8 *fill;
     int result, fd;
 
-    if ((fd = fileXioOpen("hdd0:PP.FHDB.APPS,,,128M,PFS", O_WRONLY | O_CREAT, 0644)) >= 0) {
+    if ((fd = fileXioOpen("hdd0:PP.FHDB.APPS,,,128M,PFS", FIO_O_WRONLY | FIO_O_CREAT, 0644)) >= 0) {
         if ((fill = memalign(64, 512)) != NULL) {
             memset(fill, 0, 512);
             fileXioWrite(fd, fill, 512);
@@ -3099,7 +3106,7 @@ int WriteAPPSPartitionAttributes(void)
     u32 ZoneSize;
     int result, fd, i;
 
-    if ((fd = fileXioOpen("hdd0:PP.FHDB.APPS", O_WRONLY, 0644)) >= 0) {
+    if ((fd = fileXioOpen("hdd0:PP.FHDB.APPS", FIO_O_WRONLY, 0644)) >= 0) {
         result = 0;
         memset(files, 0, sizeof(files));
 
