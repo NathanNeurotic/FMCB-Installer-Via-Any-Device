@@ -54,10 +54,43 @@ jobs:
         path: |
             FMCB-ISR-RIP.7z
 
+    - name: Get build date
+      run: echo "BUILDDATE=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
+
     - name: Create release
       if: github.ref == 'refs/heads/master'
       uses: softprops/action-gh-release@v2
       with:
         tag_name: latest
-        name: FreeMcBoot
-        files: FMCB-ISR-RIP.7z
+        # Carry the commit + date in the title, so it is obvious at a glance
+        # whether the release on the repo is the newest build.
+        name: FMCB/FHDB Installer ISR-RIP — build ${{ env.SHA8 }} (${{ env.BUILDDATE }})
+        make_latest: true
+        body: |
+          Latest build, rebuilt automatically on every push to `master`. Built from commit `${{ env.SHA8 }}`.
+
+          | File | What it is |
+          |---|---|
+          | **FMCB-ISR-RIP.7z** | **The complete package** — installer + the full `INSTALL/` payload. Unpack to a USB stick (or any supported device) and run it. |
+          | FMCBInstaller.elf | Just the installer executable, for dropping into an existing package folder. |
+
+          ### Payload layout (`INSTALL/`)
+          ```
+          MC/...                 -> memory card root      (BOOT/, SYS-CONF/, APP_WLE-R3Z/)
+          HDD/APPS/...           -> hdd0:__common:/APPS/
+          HDD/CFG_FHDB/...       -> hdd0:__sysconf:/FMCB/
+          HDD/CFG_PS2BBL/...     -> hdd0:__sysconf:/PS2BBL/
+          HDD/HDD_OSD/sysconf/.. -> root of hdd0:__sysconf
+          HDD/HDD_OSD/system/... -> hdd0:__system:/osd/
+          HDD/FSCK/...           -> hdd0:__system:/fsck/
+          SYSTEM/...             -> system KELFs + icons
+          ```
+          Only `SYSTEM/` and `HDD/FSCK/` use a built-in file list (those need specific destination
+          names and KELF signing). Everything else is a plain folder copy — add, rename or remove
+          files there freely, no recompile needed.
+
+          `HDD/HDD_OSD/sysconf` and `HDD/HDD_OSD/system` ship **empty** on purpose (Sony HDD-OSD
+          files are not redistributable). Drop your own in; empty folders are skipped.
+        files: |
+            FMCB-ISR-RIP.7z
+            installer_res/FMCBInstaller.elf
