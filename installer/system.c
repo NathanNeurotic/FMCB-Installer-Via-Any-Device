@@ -1445,8 +1445,8 @@ int PerformHDDInstallation(unsigned int flags)
                HDD/APPS/...           -> hdd0:__common:/APPS/...
                HDD/CFG_FHDB/...       -> hdd0:__sysconf:/FMCB/...
                HDD/CFG_PS2BBL/...     -> hdd0:__sysconf:/PS2BBL/...
-               HDD/HDD_OSD/sysconf/.. -> hdd0:__sysconf:/...   (partition root)
-               HDD/HDD_OSD/system/... -> hdd0:__system:/...    (partition root)
+               HDD/HDD_OSD/sysconf/.. -> hdd0:__sysconf:/...     (partition root)
+               HDD/HDD_OSD/system/... -> hdd0:__system:/osd/...  (next to osdmain.elf)
            (HDD/FSCK is handled by the hardcoded list above, because FSCK.XLF has
            to be signed as a KELF and renamed to fsck.elf.) */
         if (result >= 0) {
@@ -1482,7 +1482,7 @@ int PerformHDDInstallation(unsigned int flags)
         }
 
         if (result >= 0) {
-            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/HDD_OSD/system", "hdd0:__system:pfs:", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
+            if ((result = AddDirContentsToFileCopyList(RootFolder, "HDD/HDD_OSD/system", "hdd0:__system:pfs:/osd", 1, &FileCopyList, &NumFiles, &NumDirectories, &TotalRequiredSpaceForFiles)) < 0) {
                 DEBUG_PRINTF("AddDirContentsToFileCopyList (HDD/HDD_OSD/system) failed: %d\n", result);
             }
         }

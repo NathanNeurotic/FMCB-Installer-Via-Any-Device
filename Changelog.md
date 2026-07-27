@@ -51,7 +51,7 @@ Changes:
   | `INSTALL/HDD/CFG_FHDB/…` | `hdd0:__sysconf:/FMCB/` |
   | `INSTALL/HDD/CFG_PS2BBL/…` | `hdd0:__sysconf:/PS2BBL/` |
   | `INSTALL/HDD/HDD_OSD/sysconf/…` | root of `hdd0:__sysconf` |
-  | `INSTALL/HDD/HDD_OSD/system/…` | root of `hdd0:__system` |
+  | `INSTALL/HDD/HDD_OSD/system/…` | `hdd0:__system:/osd/` (alongside the OSD `osdmain.elf`) |
   | `INSTALL/HDD/FSCK/…` | `hdd0:__system:/fsck/` (still a fixed list: `FSCK.XLF` is signed as a KELF and renamed to `fsck.elf`) |
   | `INSTALL/SYSTEM/…` | the system KELFs/icons (fixed list: each needs a specific destination name and KELF signing) |
 
