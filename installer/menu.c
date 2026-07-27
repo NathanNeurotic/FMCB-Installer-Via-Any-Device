@@ -79,9 +79,7 @@ static struct UIMenuItem MainMenuItems[] = {
     {MITEM_BUTTON, MAIN_MENU_ID_BTN_INST, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_INSTALL},
     {MITEM_BREAK},
     {MITEM_BREAK},
-    {MITEM_BUTTON, MAIN_MENU_ID_BTN_MI, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_MI},
-    {MITEM_BREAK},
-    {MITEM_BREAK},
+    /* "Multi Install" is intentionally not offered any more. */
     {MITEM_BUTTON, MAIN_MENU_ID_BTN_UINST, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_UINSTALL},
     {MITEM_BREAK},
     {MITEM_BREAK},
@@ -373,11 +371,7 @@ void MainMenu(void)
     UISetString(&InstallMainMenu, MAIN_MENU_ID_VERSION, "v" FMCB_INSTALLER_VERSION);
     UISetString(&ExtraMenu, MAIN_MENU_ID_VERSION, "v" FMCB_INSTALLER_VERSION);
     UISetString(&MCMenu, MAIN_MENU_ID_VERSION, "v" FMCB_INSTALLER_VERSION);
-#ifdef ALLOW_MI
-    UISetEnabled(&InstallMainMenu, MAIN_MENU_ID_BTN_MI, GetPs2Type() == PS2_SYSTEM_TYPE_PS2);
-#else
-    UISetEnabled(&InstallMainMenu, MAIN_MENU_ID_BTN_MI, 0);
-#endif
+    /* No "Multi Install" button in the menu any more, so nothing to enable. */
     UISetEnabled(&ExtraMenu, MAIN_MENU_ID_BTN_INST_CROSS_PSX, GetPs2Type() == PS2_SYSTEM_TYPE_PS2);
     UISetEnabled(&ExtraMenu, MAIN_MENU_ID_BTN_INST_FHDB, IsHDDUnitConnected);
     UISetEnabled(&ExtraMenu, MAIN_MENU_ID_BTN_UINST_FHDB, IsHDDUnitConnected);

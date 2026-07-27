@@ -1144,6 +1144,9 @@ static int CopyFilesToHDD(const char *RootFolder, const struct FileCopyTarget *F
         for (i = 0, BytesCopied = 0; (i < NumFilesEntries) && (result >= 0); i++) {
             DrawFileCopyProgressScreen((float)((double)BytesCopied / TotalNumBytes));
 
+            if (FileCopyList[i].flags & FILE_SKIP) // Not present in the payload.
+                continue;
+
             if (FIO_S_ISDIR(FileCopyList[i].mode)) {
                 DEBUG_PRINTF("mkdir: %s\n", FileCopyList[i].target);
 
@@ -1361,7 +1364,14 @@ static int GetAllBaseFileStats(char MGLetter, const char *RootFolder, struct Fil
             FileCopyList[i].size = stat.size;
             (*TotalRequiredSpaceForFiles) += stat.size;
         } else {
-            DEBUG_PRINTF("Can't stat file: %s\n", path);
+            /* The file is not in the payload. Don't abort the whole installation
+               over it -- flag it so the copy stage skips it. This lets the INSTALL
+               folder be customised without having to match the built-in list. */
+            DEBUG_PRINTF("Not in payload, skipping: %s\n", path);
+            FileCopyList[i].flags |= FILE_SKIP;
+            FileCopyList[i].mode = 0;
+            FileCopyList[i].size = 0;
+            result = 0;
         }
 
         free(path);
@@ -1934,6 +1944,19 @@ static int CopyFiles(const char *RootFolder, unsigned char port, unsigned char s
     result = 0;
     for (i = 0, PrevFileSize = 0, buffer = NULL, BytesCopied = 0; (i < NumFilesEntries) && (result >= 0); i++, BytesCopied += PrevFileSize) {
         DrawFileCopyProgressScreen((float)((double)BytesCopied / TotalNumBytes));
+
+        if (FileCopyList[i].flags & FILE_SKIP) {
+            /* Not present in the payload. Flush the previous file's pending write
+               first (writes are deferred to the next iteration), exactly as the
+               directory case below does, so skipping never drops data. */
+            if (i > 0 && PrevFileSize > 0) {
+                result = SyncMCFileWrite(McFileFD, PrevFileSize, buffer);
+                if (result < 0)
+                    break;
+                PrevFileSize = 0;
+            }
+            continue;
+        }
 
         if (FIO_S_ISDIR(FileCopyList[i].mode)) {
             if (i > 0 && PrevFileSize > 0) {

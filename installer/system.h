@@ -22,6 +22,9 @@ enum CONSOLE_REGION {
 };
 
 #define FILE_IS_KELF 0x01
+/* Source file is not present in the INSTALL payload -- skip it instead of
+   failing the whole installation, so the payload can be freely customised. */
+#define FILE_SKIP    0x02
 
 enum EXTENDED_ERROR_CODES {
     EEXTMGSIGNERR = 0x1000,
