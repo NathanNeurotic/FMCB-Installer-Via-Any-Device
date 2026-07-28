@@ -57,6 +57,16 @@ jobs:
     - name: Get build date
       run: echo "BUILDDATE=$(date '+%Y-%m-%d')" >> $GITHUB_ENV
 
+    # Without this the 'latest' tag stays pinned to whatever commit first created
+    # it, so the "Source code" archives attached to the release are stale even
+    # though the built artifacts are current.
+    - name: Point the 'latest' tag at the commit being built
+      if: github.ref == 'refs/heads/master'
+      run: |
+        git config --global --add safe.directory "$GITHUB_WORKSPACE"
+        git tag -f latest "$GITHUB_SHA"
+        git push -f origin refs/tags/latest
+
     - name: Create release
       if: github.ref == 'refs/heads/master'
       uses: softprops/action-gh-release@v2

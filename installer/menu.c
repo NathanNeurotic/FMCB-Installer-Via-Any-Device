@@ -79,11 +79,8 @@ static struct UIMenuItem MainMenuItems[] = {
     {MITEM_BUTTON, MAIN_MENU_ID_BTN_INST, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_INSTALL},
     {MITEM_BREAK},
     {MITEM_BREAK},
-    /* "Multi Install" is intentionally not offered any more. */
+    /* Neither "Multi Install" nor its uninstall counterpart are offered any more. */
     {MITEM_BUTTON, MAIN_MENU_ID_BTN_UINST, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_UINSTALL},
-    {MITEM_BREAK},
-    {MITEM_BREAK},
-    {MITEM_BUTTON, MAIN_MENU_ID_BTN_DOWNGRADE_MI, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_UMI},
     {MITEM_BREAK},
     {MITEM_BREAK},
     {MITEM_BUTTON, MAIN_MENU_ID_BTN_EXIT, MITEM_FLAG_POS_MID, 0, 24, 0, 0, SYS_UI_LBL_EXIT},
