@@ -141,6 +141,7 @@ int IsLegacyMassBoot(void)
    in the log is the last operation that was attempted. */
 void InstallLog(const char *format, ...)
 {
+#ifdef INSTALL_LOG
     char path[300], cwd[256], line[256];
     va_list args;
     int len;
@@ -160,6 +161,9 @@ void InstallLog(const char *format, ...)
 
     fputs(line, file);
     fclose(file);
+#else
+    (void)format; // Build with EXTRA_CFLAGS=-DINSTALL_LOG to enable.
+#endif
 }
 
 /* Does this directory open? Used to probe candidate payload locations. */
