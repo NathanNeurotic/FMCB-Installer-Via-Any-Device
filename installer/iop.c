@@ -152,9 +152,10 @@ static void LoadBootDeviceModules(void)
         case BOOT_DEVICE_ATA:
             // FAT/exFAT partition on the ATA bus -> BDM core + ata_bd (dev9 is
             // already resident from IopInitStart). ata_bd owns the ATA controller,
-            // so we skip the ps2atad/APA HDD-install stack on an ATA boot (see
-            // main.c) to avoid a two-drivers-on-one-controller clash. sleep(1)
-            // mirrors R3Z's settle after ata_bd before it is used.
+            // so on an ATA boot SystemInitThread loads ps2hdd/pfs on top of it
+            // instead of ps2atad (see the IOP_MOD_HDD branch above), avoiding a
+            // two-drivers-on-one-controller clash while keeping the APA install
+            // available. sleep(1) mirrors R3Z's settle after ata_bd before it is used.
             SifExecModuleBuffer(bdm_irx, size_bdm_irx, 0, NULL, NULL);
             SifExecModuleBuffer(bdmfs_fatfs_irx, size_bdmfs_fatfs_irx, 0, NULL, NULL);
             SifExecModuleBuffer(ata_bd_irx, size_ata_bd_irx, 0, NULL, NULL);

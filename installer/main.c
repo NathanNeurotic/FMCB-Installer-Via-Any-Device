@@ -65,7 +65,7 @@ int main(int argc, char *argv[])
     sio_init(38400, 0, 0, 0, 0);
 
     for (result=0; result<argc;result++)
-        sio_printf("\targv[%d] = %s\n", argc, argv[result]);
+        sio_printf("\targv[%d] = %s\n", result, argv[result]);
 
     /* The installer reads its INSTALL/ payload from its own folder, which ps2sdk
        resolves from argv[0]/getcwd() regardless of the device it was launched
