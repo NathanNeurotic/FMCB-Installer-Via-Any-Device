@@ -9,7 +9,9 @@ EE_OBJS = main.o iop.o UI.o menu.o libsecr.o pad.o system.o graphics.o ReqSpaceC
 
 EE_INCS := -I$(PS2SDK)/ports/include -I$(PS2SDK)/ports/include/freetype2 -I$(PS2SDK)/ee/include -I$(PS2SDK)/common/include -I./irx/source/secrsif/src -I./irx/source/mctools/src/
 EE_LDFLAGS := -L$(PS2SDK)/ports/lib -L$(PS2SDK)/ee/lib -L$(PS2DEV)/ee/ee/lib -Tlinkfile -s
-EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfileXio -lpatches -liopreboot -lc -lkernel
+EE_LIBS = -lgs -lpng -lz -lm -lfreetype -lpoweroff -lcdvd -lmc -lpadx -lhdd -lfileXio -liopreboot -lpatches -lc -lkernel
+# libiopreboot must come before libpatches: newer ps2sdk iopreboot calls
+# sbv_patch_romdrv_set_rom1_info(), and a static archive is only scanned once.
 # Modern ps2sdk (unified toolchain) needs -D_EE and -DNEWLIB_PORT_AWARE (this code
 # uses fileXio directly), and uses -G0 instead of the old small-data -mgpopt/-G8192.
 EE_CFLAGS += -D_EE -G0 -DNEWLIB_PORT_AWARE -include sioprintf.h -Os $(EXTRA_CFLAGS)
